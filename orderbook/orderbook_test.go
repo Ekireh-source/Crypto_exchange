@@ -50,7 +50,7 @@ func TestPlaceMarketOrder(t *testing.T) {
 
 	buyOrder := NewOrder(true, 10)
 
-	matches := ob.PlaceMarketOrder(buyOrder)
+	matches, _ := ob.PlaceMarketOrder(buyOrder)
 
 	assert(t, len(matches), 1)
 	assert(t, len(ob.asks), 1)
@@ -83,7 +83,7 @@ func TestPlaceMarketOrderMultiFill(t *testing.T) {
 
 	sellOrder := NewOrder(false, 20)
 
-	matches := ob.PlaceMarketOrder(sellOrder)
+	matches, _ := ob.PlaceMarketOrder(sellOrder)
 
 	assert(t, len(matches), 3)
 	assert(t, ob.BidTotalVolume(), 4.0)

@@ -2,6 +2,7 @@ package orderbook
 
 import (
 	"fmt"
+	"math/rand"
 	"sort"
 	"time"
 )
@@ -16,8 +17,9 @@ type Match struct {
 
 
 type Order struct {
+	ID			int64
 	Size 		float64
-	Limit 		*Limit
+	Limit 		*Limit `json:"-"`
 	Bid 		bool
 	Timestamp 	int64
 }
@@ -35,6 +37,7 @@ func (o Orders) Less(i, j int) bool { return o[i].Timestamp < o[j].Timestamp }
 
 func NewOrder(bid bool, size float64) *Order {
 	return &Order{
+		ID: int64(rand.Intn(100000)),
 		Size: size,
 		Bid: bid,
 		Timestamp: time.Now().UnixNano(),
@@ -176,6 +179,7 @@ type OrderBook struct {
 
 	AskLimits map[float64]*Limit
 	BidLimits map[float64]*Limit
+	Orders    map[int64]*Order
 }
 
 func NewOrderBook() *OrderBook {
@@ -184,19 +188,19 @@ func NewOrderBook() *OrderBook {
 		bids: []*Limit{},
 		AskLimits: make(map[float64]*Limit),
 		BidLimits: make(map[float64]*Limit),
+		Orders:    make(map[int64]*Order),
 	}
 }
 
-func (ob *OrderBook) PlaceMarketOrder (order *Order) []Match {
+func (ob *OrderBook) PlaceMarketOrder (order *Order) ([]Match, error) {
 	matches := []Match{}
 	if order.Bid {
 		if order.Size > ob.AskTotalVolume() {
-			panic(fmt.Errorf("not enough volume [size: %.2f] for market order [size: %.2f]", ob.AskTotalVolume(), order.Size))
+			return nil, fmt.Errorf("not enough volume [size: %.2f] for market order [size: %.2f]", ob.AskTotalVolume(), order.Size)
 		}
 		for _, limit := range ob.Asks() {
 			limitMatches := limit.fill(order)
 			matches = append(matches, limitMatches...)
-
 
 			if len(limit.Orders) == 0{
 				ob.ClearLimit(false, limit)
@@ -204,7 +208,7 @@ func (ob *OrderBook) PlaceMarketOrder (order *Order) []Match {
 		}
 	}else {
 		if order.Size > ob.BidTotalVolume() {
-			panic(fmt.Errorf("not enough volume [size: %.2f] for market order [size: %.2f]", ob.BidTotalVolume(), order.Size))
+			return nil, fmt.Errorf("not enough volume [size: %.2f] for market order [size: %.2f]", ob.BidTotalVolume(), order.Size)
 		}
 		for _, limit := range ob.Bids() {
 			limitMatches := limit.fill(order)
@@ -215,7 +219,7 @@ func (ob *OrderBook) PlaceMarketOrder (order *Order) []Match {
 			}
 		}
 	}
-	return matches
+	return matches, nil
 }
 
 func (ob *OrderBook) PlaceLimitOrder (price float64, order *Order) {
@@ -240,7 +244,7 @@ func (ob *OrderBook) PlaceLimitOrder (price float64, order *Order) {
 	}
 
 	limit.AddOrder(order)
-
+	ob.Orders[order.ID] = order
 	
 }
 
@@ -270,8 +274,14 @@ func (ob *OrderBook) ClearLimit(bid bool, l *Limit) {
 }
 
 func (ob *OrderBook) CancelOrder(order *Order) {
+	if order == nil {
+		return
+	}
 	Limit := order.Limit
-	Limit.DeleteOrder(order)
+	if Limit != nil {
+		Limit.DeleteOrder(order)
+	}
+	delete(ob.Orders, order.ID)
 }
 
 
