@@ -77,3 +77,9 @@ type BlockchainAdapter interface {
 	// avoid oversized RPC responses.
 	GetIncomingTransactions(ctx context.Context, address string, fromBlock int64) ([]IncomingTx, error)
 }
+
+// DepositScanner is an interface for background jobs that watch the blockchain for deposits.
+type DepositScanner interface {
+	// AddAddress tells the scanner to start watching a newly generated deposit address.
+	AddAddress(addr string)
+}

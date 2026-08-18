@@ -1,24 +1,30 @@
 import apiRequest from '@/lib/apiRequest';
+import {
+  loginSchema,
+  registerSchema,
+  authResponseSchema,
+  type LoginDto,
+  type RegisterDto,
+  type AuthResponse,
+} from './auth.schema';
 
-export interface RegisterDto {
-  email: string;
-  password: string;
-  referral_code?: string;
-}
-
-export interface LoginDto {
-  email: string;
-  password: string;
-}
+export type { LoginDto, RegisterDto, AuthResponse };
 
 export const authService = {
-  register: async (data: RegisterDto) => {
-    const response = await apiRequest.post('/auth/register', data);
-    return response.data;
+  login: async (data: LoginDto): Promise<AuthResponse> => {
+    // Validate input before sending
+    loginSchema.parse(data);
+
+    const response = await apiRequest.post('/auth/login', data);
+    // Parse and validate the API response shape
+    return authResponseSchema.parse(response.data);
   },
 
-  login: async (data: LoginDto) => {
-    const response = await apiRequest.post('/auth/login', data);
-    return response.data;
+  register: async (data: RegisterDto): Promise<AuthResponse> => {
+    // Validate input before sending
+    registerSchema.parse(data);
+
+    const response = await apiRequest.post('/auth/register', data);
+    return authResponseSchema.parse(response.data);
   },
 };

@@ -71,8 +71,10 @@ func main() {
 		models.NetworkTRON: tronClient,
 	}
 
+	scanners := make(map[models.Network]blockchain.DepositScanner)
+
 	// Register all application routes
-	api.RegisterRoutes(e, cfg, pool, adapters)
+	api.RegisterRoutes(e, cfg, pool, adapters, scanners)
 
 	// ── Start server ──────────────────────────────────────────────────────────
 	go func() {

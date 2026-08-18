@@ -6,11 +6,13 @@ import (
 	"log"
 	"math/big"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 
 	"exchange/internal/blockchain"
 )
@@ -23,6 +25,7 @@ type OnDepositFunc func(tx blockchain.IncomingTx)
 // transfers. It polls via eth_getLogs every pollInterval.
 type Monitor struct {
 	client          *Client
+	mu              sync.RWMutex
 	addresses       map[common.Address]bool // set of deposit addresses to watch
 	tokenContracts  []common.Address        // BEP-20 contracts to watch
 	onDeposit       OnDepositFunc
@@ -53,11 +56,15 @@ func NewMonitor(
 
 // AddAddress registers an address to watch for incoming deposits.
 func (m *Monitor) AddAddress(addr string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.addresses[common.HexToAddress(addr)] = true
 }
 
 // RemoveAddress stops watching the given address.
 func (m *Monitor) RemoveAddress(addr string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	delete(m.addresses, common.HexToAddress(addr))
 }
 
@@ -83,7 +90,10 @@ func (m *Monitor) Start(ctx context.Context) {
 
 // poll fetches Transfer events since lastBlock and calls onDeposit for matches.
 func (m *Monitor) poll(ctx context.Context) error {
-	if len(m.addresses) == 0 {
+	m.mu.RLock()
+	count := len(m.addresses)
+	m.mu.RUnlock()
+	if count == 0 {
 		return nil
 	}
 
@@ -97,7 +107,45 @@ func (m *Monitor) poll(ctx context.Context) error {
 		m.lastBlock = int64(currentBlock) - 50
 	}
 
-	// ── BEP-20 token Transfer events ──────────────────────────────────────────
+	// ── 1. Native Transfers (ETH/BNB) ─────────────────────────────────────────
+	for i := m.lastBlock + 1; i <= int64(currentBlock); i++ {
+		block, err := m.client.rpc.BlockByNumber(ctx, big.NewInt(i))
+		if err != nil {
+			log.Printf("bsc monitor: error fetching block %d: %v", i, err)
+			continue
+		}
+
+		for _, tx := range block.Transactions() {
+			if tx.To() == nil {
+				continue // contract creation
+			}
+			m.mu.RLock()
+			isWatched := m.addresses[*tx.To()]
+			m.mu.RUnlock()
+
+			if isWatched && tx.Value().Cmp(big.NewInt(0)) > 0 {
+				sender, err := types.Sender(types.LatestSignerForChainID(m.client.chainID), tx)
+				fromAddr := ""
+				if err == nil {
+					fromAddr = sender.Hex()
+				}
+				log.Printf("bsc monitor: detected native deposit of %s wei to %s", tx.Value().String(), tx.To().Hex())
+				m.onDeposit(blockchain.IncomingTx{
+					TxHash:      tx.Hash().Hex(),
+					FromAddress: fromAddr,
+					ToAddress:   tx.To().Hex(),
+					Amount:      tx.Value(),
+					Decimals:    18,
+					Asset:       "NATIVE", // Special indicator for native coin
+					Network:     m.client.Network(),
+					BlockNumber: i,
+					Timestamp:   time.Now(),
+				})
+			}
+		}
+	}
+
+	// ── 2. BEP-20 token Transfer events ───────────────────────────────────────
 	transferABI, _ := abi.JSON(strings.NewReader(`[{
 		"anonymous":false,
 		"name":"Transfer",
@@ -129,22 +177,29 @@ func (m *Monitor) poll(ctx context.Context) error {
 				continue
 			}
 			to := common.HexToAddress(l.Topics[2].Hex())
-			if !m.addresses[to] {
+			
+			m.mu.RLock()
+			isWatched := m.addresses[to]
+			m.mu.RUnlock()
+
+			if !isWatched {
 				continue // not one of our deposit addresses
 			}
 
 			from := common.HexToAddress(l.Topics[1].Hex())
 			amount := new(big.Int).SetBytes(l.Data)
 
+			log.Printf("bsc monitor: detected token deposit of %s to %s", amount.String(), to.Hex())
 			m.onDeposit(blockchain.IncomingTx{
 				TxHash:      l.TxHash.Hex(),
 				FromAddress: from.Hex(),
 				ToAddress:   to.Hex(),
 				Amount:      amount,
-				Decimals:    18,
+				Decimals:    18, // Should be dynamic based on asset, simplifying for MVP
+				Asset:       contract.Hex(), // Pass contract address so ProcessDeposit can map to assetID
 				Network:     m.client.Network(),
 				BlockNumber: int64(l.BlockNumber),
-				Timestamp:   time.Now(), // block timestamp would require extra RPC call
+				Timestamp:   time.Now(),
 			})
 		}
 	}
