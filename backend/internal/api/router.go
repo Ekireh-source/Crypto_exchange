@@ -31,9 +31,13 @@ func RegisterRoutes(e *echo.Echo, cfg *config.Config, pool *db.Pool, adapters ma
 	authSvc := services.NewAuthService(cfg, userRepo)
 	priceSvc := services.NewPriceService(cfg.CoinGeckoAPIKey)
 	walletSvc := services.NewWalletService(cfg, walletRepo, priceSvc, adapters, scanners)
+	sweeperSvc := services.NewSweeperService(cfg, walletRepo, adapters)
 
 	// ── Background Scanners ───────────────────────────────────────────────────
 	ctx := context.Background()
+
+	// 0. Start Sweeper Service
+	sweeperSvc.Start(ctx)
 
 	// 1. Initialize BSC Monitor
 	if bscAdapter, ok := adapters[models.NetworkBSC].(*bsc.Client); ok {

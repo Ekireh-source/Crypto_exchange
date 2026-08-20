@@ -50,6 +50,18 @@ type Config struct {
 
 	// External APIs
 	CoinGeckoAPIKey string
+
+	// Hot Wallet / Sweeper
+	HotWalletBSCKey         string
+	HotWalletBSCAddress     string
+	HotWalletTronKey        string
+	HotWalletTronAddress    string
+	MasterGasWalletBSCKey   string
+	MasterGasWalletTronKey  string
+	MinSweepUSDThreshold    float64
+	WithdrawalFeeUSD     float64
+	BSCMinConfirmations  int64
+	TronMinConfirmations int64
 }
 
 // Load reads .env (if present) then environment variables and returns a Config.
@@ -117,6 +129,23 @@ func Load() (*Config, error) {
 
 	// ── External APIs ─────────────────────────────────────────────────────────
 	cfg.CoinGeckoAPIKey = getEnvOrDefault("COINGECKO_API_KEY", "")
+
+	// ── Hot Wallet / Sweeper ──────────────────────────────────────────────────
+	cfg.HotWalletBSCKey = getEnvOrDefault("HOT_WALLET_BSC_KEY", "")
+	cfg.HotWalletBSCAddress = getEnvOrDefault("HOT_WALLET_BSC_ADDRESS", "")
+	cfg.HotWalletTronKey = getEnvOrDefault("HOT_WALLET_TRON_KEY", "")
+	cfg.HotWalletTronAddress = getEnvOrDefault("HOT_WALLET_TRON_ADDRESS", "")
+	cfg.MasterGasWalletBSCKey = getEnvOrDefault("MASTER_GAS_WALLET_BSC_KEY", "")
+	cfg.MasterGasWalletTronKey = getEnvOrDefault("MASTER_GAS_WALLET_TRON_KEY", "")
+
+	minSweep, _ := strconv.ParseFloat(getEnvOrDefault("MIN_SWEEP_USD_THRESHOLD", "50.0"), 64)
+	cfg.MinSweepUSDThreshold = minSweep
+
+	withdrawFee, _ := strconv.ParseFloat(getEnvOrDefault("WITHDRAWAL_FEE_USD", "1.0"), 64)
+	cfg.WithdrawalFeeUSD = withdrawFee
+
+	cfg.BSCMinConfirmations = int64(mustGetEnvInt("BSC_MIN_CONFIRMATIONS", 15))
+	cfg.TronMinConfirmations = int64(mustGetEnvInt("TRON_MIN_CONFIRMATIONS", 20))
 
 	return cfg, nil
 }

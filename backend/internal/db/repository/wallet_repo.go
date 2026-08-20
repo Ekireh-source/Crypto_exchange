@@ -211,7 +211,7 @@ func (r *WalletRepo) GetTransactions(ctx context.Context, userID uuid.UUID, limi
 	}
 
 	query := `
-		SELECT id, user_id, asset_id, type, status, amount, fee, tx_hash, from_address, to_address, note, created_at, confirmed_at
+		SELECT id, user_id, asset_id, type, status, amount, fee, tx_hash, from_address, to_address, note, sweep_status, created_at, confirmed_at
 		FROM transactions
 		WHERE user_id = $1
 	`
@@ -239,7 +239,7 @@ func (r *WalletRepo) GetTransactions(ctx context.Context, userID uuid.UUID, limi
 		if err := rows.Scan(
 			&tx.ID, &tx.UserID, &tx.AssetID, &tx.Type, &tx.Status,
 			&tx.Amount, &tx.Fee, &tx.TxHash, &tx.FromAddress, &tx.ToAddress,
-			&tx.Note, &tx.CreatedAt, &tx.ConfirmedAt,
+			&tx.Note, &tx.SweepStatus, &tx.CreatedAt, &tx.ConfirmedAt,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scanning transaction: %w", err)
 		}
@@ -251,14 +251,18 @@ func (r *WalletRepo) GetTransactions(ctx context.Context, userID uuid.UUID, limi
 
 // CreateTransaction inserts a new transaction record into the database.
 func (r *WalletRepo) CreateTransaction(ctx context.Context, tx *models.Transaction) error {
+	if tx.SweepStatus == "" {
+		tx.SweepStatus = models.SweepNotNeeded
+	}
+
 	query := `
-		INSERT INTO transactions (id, user_id, asset_id, type, status, amount, fee, tx_hash, from_address, to_address, note, created_at, confirmed_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		INSERT INTO transactions (id, user_id, asset_id, type, status, amount, fee, tx_hash, from_address, to_address, note, sweep_status, created_at, confirmed_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 	`
 	_, err := r.pool.Exec(ctx, query,
 		tx.ID, tx.UserID, tx.AssetID, tx.Type, tx.Status,
 		tx.Amount, tx.Fee, tx.TxHash, tx.FromAddress, tx.ToAddress,
-		tx.Note, tx.CreatedAt, tx.ConfirmedAt,
+		tx.Note, tx.SweepStatus, tx.CreatedAt, tx.ConfirmedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("inserting transaction: %w", err)
@@ -276,6 +280,49 @@ func (r *WalletRepo) UpdateTransactionStatus(ctx context.Context, txID uuid.UUID
 	_, err := r.pool.Exec(ctx, query, status, txHash, txID)
 	if err != nil {
 		return fmt.Errorf("updating transaction status: %w", err)
+	}
+	return nil
+}
+
+// GetPendingSweeps fetches transactions that need sweeping.
+func (r *WalletRepo) GetPendingSweeps(ctx context.Context) ([]models.Transaction, error) {
+	query := `
+		SELECT id, user_id, asset_id, type, status, amount, fee, tx_hash, from_address, to_address, note, sweep_status, created_at, confirmed_at
+		FROM transactions
+		WHERE sweep_status IN ($1, $2)
+		  AND status = $3
+	`
+	rows, err := r.pool.Query(ctx, query, models.SweepPendingSweep, models.SweepPendingGas, models.TxConfirmed)
+	if err != nil {
+		return nil, fmt.Errorf("querying pending sweeps: %w", err)
+	}
+	defer rows.Close()
+
+	var txs []models.Transaction
+	for rows.Next() {
+		var tx models.Transaction
+		if err := rows.Scan(
+			&tx.ID, &tx.UserID, &tx.AssetID, &tx.Type, &tx.Status,
+			&tx.Amount, &tx.Fee, &tx.TxHash, &tx.FromAddress, &tx.ToAddress,
+			&tx.Note, &tx.SweepStatus, &tx.CreatedAt, &tx.ConfirmedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scanning pending sweep: %w", err)
+		}
+		txs = append(txs, tx)
+	}
+	return txs, nil
+}
+
+// UpdateSweepStatus updates the sweep_status of a transaction.
+func (r *WalletRepo) UpdateSweepStatus(ctx context.Context, txID uuid.UUID, sweepStatus models.SweepStatus) error {
+	query := `
+		UPDATE transactions
+		SET sweep_status = $1
+		WHERE id = $2
+	`
+	_, err := r.pool.Exec(ctx, query, sweepStatus, txID)
+	if err != nil {
+		return fmt.Errorf("updating sweep status: %w", err)
 	}
 	return nil
 }

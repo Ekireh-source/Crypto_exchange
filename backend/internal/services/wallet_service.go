@@ -138,6 +138,12 @@ func (s *WalletService) getOrCreateDepositAddressRecord(ctx context.Context, use
 		return nil, fmt.Errorf("saving deposit address: %w", err)
 	}
 
+	// In development mode, auto-fund the Hot Wallet on Anvil/Hardhat so it can send out withdrawals.
+	// Only relevant for BSC — TRON uses a different testnet (Shasta).
+	if asset.Network == models.NetworkBSC {
+		s.autoFundDevAddress(ctx, s.cfg.HotWalletBSCAddress)
+	}
+
 	// Tell the blockchain scanner to start watching this new address immediately
 	if s.scanners != nil {
 		if scanner, ok := s.scanners[asset.Network]; ok {
@@ -199,51 +205,74 @@ func (s *WalletService) SendCrypto(ctx context.Context, userID uuid.UUID, req Se
 		return nil, fmt.Errorf("asset not found")
 	}
 
-	// 3. Get or generate sender's deposit wallet record
-	da, err := s.getOrCreateDepositAddressRecord(ctx, userID, asset)
+	// 3. Check user's balance
+	balances, err := s.walletDB.GetBalances(ctx, userID)
 	if err != nil {
-		return nil, fmt.Errorf("fetching deposit address for transfer: %w", err)
+		return nil, fmt.Errorf("fetching balances: %w", err)
+	}
+	
+	var userBal *big.Float
+	for _, b := range balances {
+		if b.AssetID == req.AssetID {
+			userBal, _ = new(big.Float).SetString(b.Available)
+			break
+		}
+	}
+	if userBal == nil {
+		userBal = big.NewFloat(0)
 	}
 
-	privKeyHex, err := crypto.DecryptPrivateKey(da.EncryptedPrivateKey, s.cfg.EncryptionKey)
-	if err != nil {
-		return nil, fmt.Errorf("decrypting sender key: %w", err)
+	// 4. Calculate Fee in Token (using Price Service)
+	var feeAmt float64 = 0
+	if s.priceSvc != nil {
+		prices, err := s.priceSvc.GetPrices(ctx, nil)
+		if err == nil {
+			if price, exists := prices[asset.Symbol]; exists && price > 0 {
+				feeAmt = s.cfg.WithdrawalFeeUSD / price
+			}
+		}
+	}
+	feeFloat := big.NewFloat(feeAmt)
+
+	// 5. Total required = amount + fee
+	totalRequired := new(big.Float).Add(amountFloat, feeFloat)
+	if userBal.Cmp(totalRequired) < 0 {
+		return nil, fmt.Errorf("insufficient balance. You need %v %s (including %v fee)", totalRequired, asset.Symbol, feeFloat)
 	}
 
-	// 4. Retrieve Blockchain Adapter for the asset network
+	// 6. Retrieve Blockchain Adapter and Hot Wallet
 	adapter, ok := s.adapters[asset.Network]
 	if !ok {
 		return nil, fmt.Errorf("no blockchain adapter registered for network %s", asset.Network)
 	}
 
-	// In development mode, auto-fund the sender address on Anvil/Hardhat.
-	// Only relevant for BSC — TRON uses a different testnet (Shasta).
-	if asset.Network == models.NetworkBSC {
-		s.autoFundDevAddress(ctx, da.Address)
+	hotWalletPrivKey := s.cfg.HotWalletBSCKey
+	hotWalletAddr := s.cfg.HotWalletBSCAddress
+	if asset.Network == models.NetworkTRON {
+		hotWalletPrivKey = s.cfg.HotWalletTronKey
+		hotWalletAddr = s.cfg.HotWalletTronAddress
 	}
 
-	// 5. Estimate fee
-	isToken := asset.ContractAddress != nil
-	feeEst, err := adapter.EstimateFee(ctx, isToken)
-	feeStr := "0.0005"
-	if err == nil && feeEst != nil && feeEst.NativeAmount != nil {
-		feeStr = feeEst.NativeAmount.Text('f', 6)
+	if hotWalletPrivKey == "" {
+		return nil, fmt.Errorf("hot wallet not configured for network %s", asset.Network)
 	}
 
-	// 6. Broadcast transaction on-chain via BlockchainAdapter
+	// 7. Broadcast transaction on-chain via BlockchainAdapter from the Hot Wallet
 	var txHash string
+	isToken := asset.ContractAddress != nil
 	if !isToken {
-		txHash, err = adapter.SendNative(ctx, privKeyHex, req.ToAddress, amountFloat)
+		txHash, err = adapter.SendNative(ctx, hotWalletPrivKey, req.ToAddress, amountFloat)
 	} else {
-		txHash, err = adapter.SendToken(ctx, privKeyHex, req.ToAddress, *asset.ContractAddress, amountFloat, asset.Decimals)
+		txHash, err = adapter.SendToken(ctx, hotWalletPrivKey, req.ToAddress, *asset.ContractAddress, amountFloat, asset.Decimals)
 	}
 
-	// 7. Construct and store transaction record
 	if err != nil {
 		return nil, fmt.Errorf("on-chain broadcast failed: %w", err)
 	}
 
+	// 8. Construct and store transaction record
 	status := models.TxConfirmed
+	totalDeduction := totalRequired.Text('f', 8)
 
 	tx := &models.Transaction{
 		ID:          uuid.New(),
@@ -252,21 +281,21 @@ func (s *WalletService) SendCrypto(ctx context.Context, userID uuid.UUID, req Se
 		Type:        models.TxWithdrawal,
 		Status:      status,
 		Amount:      req.Amount,
-		Fee:         feeStr,
-		FromAddress: &da.Address,
+		Fee:         feeFloat.Text('f', 8),
+		FromAddress: &hotWalletAddr,
 		ToAddress:   &req.ToAddress,
 		TxHash:      &txHash,
 		Note:        &req.Note,
+		SweepStatus: models.SweepNotNeeded,
 		CreatedAt:   time.Now(),
 	}
 
-	// 8. Persist Transaction record to Database
 	if err := s.walletDB.CreateTransaction(ctx, tx); err != nil {
 		return nil, fmt.Errorf("persisting transaction: %w", err)
 	}
 
-	// 9. Deduct / update user's balance
-	_ = s.walletDB.DeductBalance(ctx, userID, req.AssetID, req.Amount)
+	// 9. Deduct the full amount + fee from the user's DB balance
+	_ = s.walletDB.DeductBalance(ctx, userID, req.AssetID, totalDeduction)
 
 	return tx, nil
 }
@@ -318,6 +347,7 @@ func (s *WalletService) ProcessDeposit(ctx context.Context, tx blockchain.Incomi
 		TxHash:      &txHash,
 		FromAddress: &fromAddr,
 		ToAddress:   &toAddr,
+		SweepStatus: models.SweepPendingSweep,
 		CreatedAt:   time.Now(),
 		ConfirmedAt: &tx.Timestamp,
 	}
@@ -344,13 +374,14 @@ func (s *WalletService) ProcessDeposit(ctx context.Context, tx blockchain.Incomi
 	return nil
 }
 
-// autoFundDevAddress automatically credits gas to sender addresses on local Anvil/Hardhat nodes during development.
+// autoFundDevAddress automatically credits gas to addresses on local Anvil nodes during development.
 func (s *WalletService) autoFundDevAddress(ctx context.Context, address string) {
 	if !s.cfg.IsDevelopment() {
 		return
 	}
 	rpcURL := s.cfg.ActiveBSCRPC()
-	payload := fmt.Sprintf(`{"jsonrpc":"2.0","method":"anvil_setBalance","params":["%s","0x8ac7230489e80000"],"id":1}`, address)
+	// Fund with 100 BNB for testing
+	payload := fmt.Sprintf(`{"jsonrpc":"2.0","method":"anvil_setBalance","params":["%s","0x56bc75e2d63100000"],"id":1}`, address)
 	req, err := http.NewRequestWithContext(ctx, "POST", rpcURL, strings.NewReader(payload))
 	if err != nil {
 		return
