@@ -23,8 +23,8 @@ type IncomingTx struct {
 	ToAddress   string
 	Amount      *big.Int   // in the smallest unit (wei, sun, satoshi, …)
 	Decimals    int
-	Asset       string     // symbol, e.g. "USDT"
-	Network     string     // e.g. "BSC"
+	Asset       string     // "NATIVE" for the chain's native coin; contract address for tokens (BEP-20/TRC-20)
+	Network     string     // e.g. "BSC" or "TRON"
 	BlockNumber int64
 	Timestamp   time.Time
 }

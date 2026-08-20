@@ -29,10 +29,10 @@ export default function DashboardPage() {
     <div className="flex flex-col w-full animate-in fade-in duration-500 pb-20">
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
+
         {/* Left Column */}
         <div className="lg:col-span-2 flex flex-col gap-8">
-          
+
           {/* Balance & Assets */}
           <div>
             <h2 className="text-[32px] font-medium text-white mb-8 tracking-tight">
@@ -45,7 +45,7 @@ export default function DashboardPage() {
                 })}`
               )}
             </h2>
-            
+
             <div className="flex flex-col gap-2">
               {/* Asset Item: Crypto */}
               <div className="flex items-center justify-between py-3 cursor-pointer group">
@@ -110,7 +110,7 @@ export default function DashboardPage() {
                 <Icon icon="hugeicons:arrow-right-01" className="size-4" />
               </button>
             </div>
-            
+
             <div className="flex flex-col items-center justify-center py-10 px-4">
               <div className="relative mb-6">
                 <div className="size-16 bg-[#16181d] rounded-full flex items-center justify-center">
@@ -128,16 +128,16 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <SupportedAssets/>
+          <SupportedAssets />
 
         </div>
 
         {/* Right Column */}
         <div className="lg:col-span-1 flex flex-col gap-6">
-          
+
           {/* Quick Buy Widget */}
           <div className="bg-[#0a0b0d] border border-[#22252e] rounded-[16px] p-6">
-            
+
             {/* Tabs */}
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-1 bg-[#16181d] p-1 rounded-full border border-[#22252e]">
@@ -165,7 +165,7 @@ export default function DashboardPage() {
 
             {/* Selection Items */}
             <div className="flex flex-col gap-2 mb-6">
-              
+
               <div className="flex items-center justify-between p-3 rounded-[12px] hover:bg-[#16181d] cursor-pointer transition-colors border border-transparent hover:border-[#22252e] group">
                 <div className="flex items-center gap-3">
                   <div className="size-8 rounded-full bg-[#1e2029] flex items-center justify-center p-1.5">
@@ -197,7 +197,7 @@ export default function DashboardPage() {
                 </div>
                 <Icon icon="hugeicons:arrow-right-01" className="size-4 text-[#888c99] group-hover:text-white" />
               </div>
-              
+
             </div>
 
             {/* CTA Button */}

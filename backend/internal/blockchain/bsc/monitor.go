@@ -107,6 +107,14 @@ func (m *Monitor) poll(ctx context.Context) error {
 		m.lastBlock = int64(currentBlock) - 50
 	}
 
+	if m.lastBlock < 0 {
+		m.lastBlock = 0
+	}
+
+	if int64(currentBlock) <= m.lastBlock {
+		return nil
+	}
+
 	// ── 1. Native Transfers (ETH/BNB) ─────────────────────────────────────────
 	for i := m.lastBlock + 1; i <= int64(currentBlock); i++ {
 		block, err := m.client.rpc.BlockByNumber(ctx, big.NewInt(i))

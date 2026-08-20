@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -157,7 +158,7 @@ func (c *Config) ActiveTronBaseURL() string {
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 func mustGetEnv(key string) string {
-	v := os.Getenv(key)
+	v := strings.TrimSpace(os.Getenv(key))
 	if v == "" {
 		panic(fmt.Sprintf("required environment variable %q is not set", key))
 	}
@@ -165,7 +166,7 @@ func mustGetEnv(key string) string {
 }
 
 func getEnvOrDefault(key, fallback string) string {
-	if v := os.Getenv(key); v != "" {
+	if v := strings.TrimSpace(os.Getenv(key)); v != "" {
 		return v
 	}
 	return fallback

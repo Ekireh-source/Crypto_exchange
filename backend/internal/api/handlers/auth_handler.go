@@ -44,11 +44,20 @@ func (h *AuthHandler) Register(c echo.Context) error {
 		return err
 	}
 
+	tokens, err := h.authSvc.GenerateTokenPair(user.ID)
+	if err != nil {
+		return err
+	}
+
 	// Omit password hash in response
 	return c.JSON(http.StatusCreated, map[string]interface{}{
-		"id":            user.ID,
-		"email":         user.Email,
-		"referral_code": user.ReferralCode,
+		"user": map[string]interface{}{
+			"id":            user.ID,
+			"email":         user.Email,
+			"referral_code": user.ReferralCode,
+		},
+		"access_token":  tokens.AccessToken,
+		"refresh_token": tokens.RefreshToken,
 	})
 }
 
@@ -63,7 +72,7 @@ func (h *AuthHandler) Login(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
 	}
 
-	tokens, err := h.authSvc.Login(c.Request().Context(), req.Email, req.Password)
+	user, tokens, err := h.authSvc.Login(c.Request().Context(), req.Email, req.Password)
 	if err != nil {
 		if errors.Is(err, services.ErrInvalidCredentials) {
 			return echo.NewHTTPError(http.StatusUnauthorized, "Invalid email or password")
@@ -71,7 +80,15 @@ func (h *AuthHandler) Login(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, tokens)
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"user": map[string]interface{}{
+			"id":            user.ID,
+			"email":         user.Email,
+			"referral_code": user.ReferralCode,
+		},
+		"access_token":  tokens.AccessToken,
+		"refresh_token": tokens.RefreshToken,
+	})
 }
 
 type RefreshRequest struct {

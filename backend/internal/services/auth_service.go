@@ -91,21 +91,26 @@ type TokenPair struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
-// Login authenticates a user and returns a JWT token pair.
-func (s *AuthService) Login(ctx context.Context, email, password string) (*TokenPair, error) {
+// Login authenticates a user and returns the user model and a JWT token pair.
+func (s *AuthService) Login(ctx context.Context, email, password string) (*models.User, *TokenPair, error) {
 	user, err := s.userRepo.GetByEmail(ctx, email)
 	if err != nil {
-		return nil, fmt.Errorf("fetching user: %w", err)
+		return nil, nil, fmt.Errorf("fetching user: %w", err)
 	}
 	if user == nil {
-		return nil, ErrInvalidCredentials
+		return nil, nil, ErrInvalidCredentials
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
-		return nil, ErrInvalidCredentials
+		return nil, nil, ErrInvalidCredentials
 	}
 
-	return s.generateTokenPair(user.ID)
+	tokens, err := s.GenerateTokenPair(user.ID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return user, tokens, nil
 }
 
 // RefreshToken validates a refresh token and issues a new token pair.
@@ -136,10 +141,10 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*T
 		return nil, ErrInvalidToken
 	}
 
-	return s.generateTokenPair(userID)
+	return s.GenerateTokenPair(userID)
 }
 
-func (s *AuthService) generateTokenPair(userID uuid.UUID) (*TokenPair, error) {
+func (s *AuthService) GenerateTokenPair(userID uuid.UUID) (*TokenPair, error) {
 	accessClaims := jwt.MapClaims{
 		"sub":  userID.String(),
 		"type": "access",

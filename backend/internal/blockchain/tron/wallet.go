@@ -4,8 +4,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"math/big"
 
-	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"github.com/ethereum/go-ethereum/crypto"
 	"golang.org/x/crypto/ripemd160" //nolint:staticcheck // TRON protocol requirement
 )
@@ -48,12 +48,13 @@ func privateKeyToTronAddress(privKeyHex string) (string, error) {
 		return "", fmt.Errorf("tron: decoding private key: %w", err)
 	}
 
-	// Recover the secp256k1 public key.
-	privKey := secp256k1.PrivKeyFromBytes(privKeyBytes)
-	pubKey := privKey.PubKey()
+	privKey, err := crypto.ToECDSA(privKeyBytes)
+	if err != nil {
+		return "", fmt.Errorf("tron: parsing private key: %w", err)
+	}
 
 	// Uncompressed public key (65 bytes, starts with 0x04).
-	pubBytes := pubKey.SerializeUncompressed()
+	pubBytes := crypto.FromECDSAPub(&privKey.PublicKey)
 	// Drop the 0x04 prefix → 64 bytes.
 	pubBytes = pubBytes[1:]
 
@@ -93,10 +94,6 @@ func base58Encode(input []byte) string {
 
 	// Convert big-endian byte slice to base58 digits.
 	var result []byte
-	n := new([32]byte)
-	copy(n[32-len(input):], input)
-
-	// Simple big-number division.
 	buf := make([]byte, len(input))
 	copy(buf, input)
 
@@ -123,6 +120,64 @@ func base58Encode(input []byte) string {
 	for i, j := 0, len(result)-1; i < j; i, j = i+1, j-1 {
 		result[i], result[j] = result[j], result[i]
 	}
-	_ = ripemd160.New() // keep import used
 	return string(result)
 }
+
+// base58Decode reverses base58Encode. Returns the raw bytes or an error.
+func base58Decode(s string) ([]byte, error) {
+	n := big.NewInt(0)
+	base := big.NewInt(58)
+
+	for _, c := range s {
+		idx := -1
+		for i, ac := range base58Alphabet {
+			if ac == c {
+				idx = i
+				break
+			}
+		}
+		if idx < 0 {
+			return nil, fmt.Errorf("invalid base58 character: %q", c)
+		}
+		n.Mul(n, base)
+		n.Add(n, big.NewInt(int64(idx)))
+	}
+
+	result := n.Bytes()
+
+	// Restore leading zeros: each '1' in input = one 0x00 byte.
+	nLeading := 0
+	for _, c := range s {
+		if c != rune(base58Alphabet[0]) {
+			break
+		}
+		nLeading++
+	}
+	return append(make([]byte, nLeading), result...), nil
+}
+
+// hexToTronAddress converts a raw hex address (as returned by TronGrid in
+// native transaction contract fields) to a Base58Check TRON address.
+//
+// TronGrid encodes native tx addresses as 42-char hex with "41" prefix
+// (e.g. "41fb1311854d10d710be5578c5c68c77c3c49103a7").
+// We prepend 0x41, double-SHA256 the 21 bytes for the checksum, then Base58 encode.
+func hexToTronAddress(hexAddr string) (string, error) {
+	// Strip an optional leading "0x" or "41" prefix so we always work with raw bytes.
+	// TronGrid returns the full 21-byte payload as 42 hex chars (no 0x prefix).
+	raw, err := hex.DecodeString(hexAddr)
+	if err != nil {
+		return "", fmt.Errorf("tron: decoding hex address %q: %w", hexAddr, err)
+	}
+	// If the decoded bytes are 20 bytes (missing 0x41 prefix), prepend it.
+	if len(raw) == 20 {
+		raw = append([]byte{0x41}, raw...)
+	}
+	if len(raw) != 21 {
+		return "", fmt.Errorf("tron: unexpected hex address length %d (want 21 bytes)", len(raw))
+	}
+	return base58CheckEncode(raw), nil
+}
+
+// keep ripemd160 import for any future use (TRON uses it internally).
+var _ = ripemd160.New

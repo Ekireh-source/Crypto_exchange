@@ -216,8 +216,11 @@ func (s *WalletService) SendCrypto(ctx context.Context, userID uuid.UUID, req Se
 		return nil, fmt.Errorf("no blockchain adapter registered for network %s", asset.Network)
 	}
 
-	// In development mode, auto-fund the sender address on Anvil/Hardhat with gas if needed
-	s.autoFundDevAddress(ctx, da.Address)
+	// In development mode, auto-fund the sender address on Anvil/Hardhat.
+	// Only relevant for BSC — TRON uses a different testnet (Shasta).
+	if asset.Network == models.NetworkBSC {
+		s.autoFundDevAddress(ctx, da.Address)
+	}
 
 	// 5. Estimate fee
 	isToken := asset.ContractAddress != nil
@@ -236,14 +239,11 @@ func (s *WalletService) SendCrypto(ctx context.Context, userID uuid.UUID, req Se
 	}
 
 	// 7. Construct and store transaction record
-	status := models.TxPending
 	if err != nil {
-		// Log warning if on-chain broadcast failed (e.g. testnet RPC unaccessible or insufficient gas)
-		fmt.Printf("On-chain transfer broadcast notice: %v. Using pending status.\n", err)
-		txHash = fmt.Sprintf("0xdev_%s", uuid.New().String()[:16])
-	} else {
-		status = models.TxConfirmed
+		return nil, fmt.Errorf("on-chain broadcast failed: %w", err)
 	}
+
+	status := models.TxConfirmed
 
 	tx := &models.Transaction{
 		ID:          uuid.New(),
@@ -273,21 +273,31 @@ func (s *WalletService) SendCrypto(ctx context.Context, userID uuid.UUID, req Se
 
 // ProcessDeposit is called by the background blockchain monitor when a verified inbound transfer is detected.
 func (s *WalletService) ProcessDeposit(ctx context.Context, tx blockchain.IncomingTx) error {
-	userID, assetID, err := s.walletDB.GetUserByDepositAddress(ctx, tx.ToAddress)
+	userID, addrAssetID, err := s.walletDB.GetUserByDepositAddress(ctx, tx.ToAddress)
 	if err != nil {
 		return fmt.Errorf("failed to lookup user for address %s: %w", tx.ToAddress, err)
 	}
 
-	// Verify if the asset matches the incoming transfer token contract / native
-	// In a complete implementation, you would look up the exact asset ID matching the contract.
-	// For now, we use the primary asset associated with that deposit address.
+	// Resolve the correct assetID for this deposit.
+	//
+	// A deposit address is stored per-asset, so addrAssetID is the native asset
+	// (e.g. BNB or TRX).  When a token arrives (tx.Asset != "NATIVE") we must
+	// look up the asset by its contract address so the right balance is credited.
+	assetID := addrAssetID
+	if tx.Asset != "NATIVE" && tx.Asset != "" {
+		tokenAsset, err := s.walletDB.GetAssetByContractAddress(ctx, tx.Asset, models.Network(tx.Network))
+		if err != nil {
+			return fmt.Errorf("resolving token asset for contract %s: %w", tx.Asset, err)
+		}
+		if tokenAsset == nil {
+			// We received a token we don't support — log and skip rather than error.
+			fmt.Printf("ProcessDeposit: unsupported token contract %s on %s — ignoring deposit\n", tx.Asset, tx.Network)
+			return nil
+		}
+		assetID = tokenAsset.ID
+	}
 
-	// Check if this transaction hash has already been processed
-	// To prevent double crediting, we should really do an ON CONFLICT ignore on tx_hash.
-	// But let's create the transaction and if it succeeds, add the balance.
-
-	// Format amount for DB
-	// We convert the big.Int wei/sun value to human-readable using decimals
+	// Convert the raw on-chain integer amount to a human-readable decimal string.
 	denom := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(tx.Decimals)), nil))
 	floatAmt := new(big.Float).SetInt(tx.Amount)
 	humanAmt := new(big.Float).Quo(floatAmt, denom)
@@ -312,20 +322,25 @@ func (s *WalletService) ProcessDeposit(ctx context.Context, tx blockchain.Incomi
 		ConfirmedAt: &tx.Timestamp,
 	}
 
+	fmt.Printf("ProcessDeposit: saving %s %s deposit (tx: %s, user: %s, assetID: %d)\n",
+		amtStr, tx.Asset, txHash, userID, assetID)
+
 	err = s.walletDB.CreateTransaction(ctx, dbTx)
 	if err != nil {
-		// If transaction already exists (unique constraint on tx_hash), we can return nil
+		// Deduplicate: if the tx_hash was already processed, skip silently.
 		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "unique constraint") {
+			fmt.Printf("ProcessDeposit: tx %s already processed — skipping\n", txHash)
 			return nil
 		}
 		return fmt.Errorf("saving deposit transaction: %w", err)
 	}
 
-	// Credit the balance in the DB
+	// Credit the balance in the DB.
 	if err := s.walletDB.AddBalance(ctx, userID, assetID, amtStr); err != nil {
-		return fmt.Errorf("crediting balance: %w", err)
+		return fmt.Errorf("crediting balance for tx %s: %w", txHash, err)
 	}
 
+	fmt.Printf("ProcessDeposit: credited %s to user %s (assetID: %d)\n", amtStr, userID, assetID)
 	return nil
 }
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Icon } from '@iconify/react';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { assetsService } from '@/feature/assets/assets.service';
 import { walletService } from '@/feature/wallet/wallet.service';
@@ -100,77 +101,13 @@ export default function SupportedAssets() {
           )}
         </div>
 
-        <button className="w-full py-3.5 rounded-full bg-[#22252e] text-white text-[15px] font-semibold hover:bg-[#2a2d36] transition-colors">
-          Explore all crypto
-        </button>
-      </div>
-
-      {/* ── Cash Section ── */}
-      <div className="p-6 pb-5 border-b border-[#22252e]">
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex flex-col gap-0.5">
-            <h2 className="text-xl font-bold text-white tracking-tight">Cash</h2>
-            <p className="text-[15px] text-[#00d395]">Earn 4.65% APY</p>
-          </div>
-          <button className="flex items-center justify-center size-9 rounded-full bg-[#22252e] text-[#888c99] hover:text-white transition-colors">
-            <Icon icon="hugeicons:arrow-right-01" className="size-5" />
+        <Link href="/assets" className="block w-full">
+          <button className="w-full py-3.5 rounded-full bg-[#22252e] text-white text-[15px] font-semibold hover:bg-[#2a2d36] transition-colors">
+            Explore all crypto
           </button>
-        </div>
-        
-        <button className="w-full py-3.5 rounded-full bg-[#22252e] text-white text-[15px] font-semibold hover:bg-[#2a2d36] transition-colors">
-          Deposit cash
-        </button>
+        </Link>
       </div>
 
-      {/* ── Derivatives Section ── */}
-      <div className="p-6 pb-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex flex-col gap-0.5">
-            <h2 className="text-xl font-bold text-white tracking-tight">Derivatives</h2>
-            <p className="text-[15px] text-[#888c99]">Trade with up to 50x leverage</p>
-          </div>
-          <button className="flex items-center justify-center size-9 rounded-full bg-[#22252e] text-[#888c99] hover:text-white transition-colors">
-            <Icon icon="hugeicons:arrow-right-01" className="size-5" />
-          </button>
-        </div>
-
-        <div className="flex flex-col gap-5">
-          {/* Mocked Perpetual items since they aren't fully in DB yet */}
-          <div className="flex items-center justify-between group cursor-pointer">
-            <div className="flex items-center gap-4">
-              <div className="relative size-10 rounded-full bg-[#f7931a] flex items-center justify-center shrink-0">
-                <Icon icon="cryptocurrency-color:btc" className="size-6" />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[16px] font-semibold text-white">BTC Perpetual</span>
-                <span className="px-1.5 py-0.5 rounded-[4px] bg-[#22252e] text-[#888c99] text-[11px] font-bold tracking-wide">
-                  50X
-                </span>
-              </div>
-            </div>
-            <button className="px-5 py-2 rounded-full bg-[#22252e] text-white text-[15px] font-semibold hover:bg-[#2a2d36] transition-colors">
-              Trade
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between group cursor-pointer">
-            <div className="flex items-center gap-4">
-              <div className="relative size-10 rounded-full bg-[#627eea] flex items-center justify-center shrink-0">
-                <Icon icon="cryptocurrency-color:eth" className="size-5 text-white" />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[16px] font-semibold text-white">ETH Perpetual</span>
-                <span className="px-1.5 py-0.5 rounded-[4px] bg-[#22252e] text-[#888c99] text-[11px] font-bold tracking-wide">
-                  50X
-                </span>
-              </div>
-            </div>
-            <button className="px-5 py-2 rounded-full bg-[#22252e] text-white text-[15px] font-semibold hover:bg-[#2a2d36] transition-colors">
-              Trade
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

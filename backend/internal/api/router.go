@@ -11,6 +11,7 @@ import (
 	"exchange/internal/api/middleware"
 	"exchange/internal/blockchain"
 	"exchange/internal/blockchain/bsc"
+	"exchange/internal/blockchain/tron"
 	"exchange/internal/db"
 	"exchange/internal/db/repository"
 	"exchange/internal/models"
@@ -32,31 +33,69 @@ func RegisterRoutes(e *echo.Echo, cfg *config.Config, pool *db.Pool, adapters ma
 	walletSvc := services.NewWalletService(cfg, walletRepo, priceSvc, adapters, scanners)
 
 	// ── Background Scanners ───────────────────────────────────────────────────
+	ctx := context.Background()
+
+	// 1. Initialize BSC Monitor
 	if bscAdapter, ok := adapters[models.NetworkBSC].(*bsc.Client); ok {
-		monitor := bsc.NewMonitor(bscAdapter, []string{}, func(tx blockchain.IncomingTx) {
+		tokenContracts := []string{}
+		if cfg.USDTBSCContract != "" {
+			tokenContracts = append(tokenContracts, cfg.USDTBSCContract)
+		}
+		monitor := bsc.NewMonitor(bscAdapter, tokenContracts, func(tx blockchain.IncomingTx) {
 			err := walletSvc.ProcessDeposit(context.Background(), tx)
 			if err != nil {
-				log.Printf("ERROR processing deposit: %v", err)
+				log.Printf("ERROR processing BSC deposit: %v", err)
 			} else {
-				log.Printf("Successfully processed deposit for tx: %s", tx.TxHash)
+				log.Printf("Successfully processed BSC deposit for tx: %s", tx.TxHash)
 			}
 		}, 3*time.Second)
 		scanners[models.NetworkBSC] = monitor
-
-		// Load all existing deposit addresses from DB
-		ctx := context.Background()
-		das, err := walletRepo.GetAllDepositAddresses(ctx)
-		if err == nil {
-			for _, da := range das {
-				// To be safe, we add all generated addresses to the BSC monitor. 
-				// Since TRON uses a different format, adding BSC addresses won't hurt.
-				monitor.AddAddress(da.Address)
-			}
-		}
-
 		go monitor.Start(ctx)
 	} else {
 		log.Printf("ERROR: adapters[models.NetworkBSC] is not *bsc.Client, it is %T", adapters[models.NetworkBSC])
+	}
+
+	// 2. Initialize TRON Monitor
+	if tronAdapter, ok := adapters[models.NetworkTRON].(*tron.Client); ok {
+		tokenContracts := []string{}
+		if cfg.USDTTRC20Contract != "" {
+			tokenContracts = append(tokenContracts, cfg.USDTTRC20Contract)
+		}
+		monitor := tron.NewTronMonitor(tronAdapter, tokenContracts, func(tx blockchain.IncomingTx) {
+			err := walletSvc.ProcessDeposit(context.Background(), tx)
+			if err != nil {
+				log.Printf("ERROR processing TRON deposit: %v", err)
+			} else {
+				log.Printf("Successfully processed TRON deposit for tx: %s", tx.TxHash)
+			}
+		}, 3*time.Second)
+		scanners[models.NetworkTRON] = monitor
+		go monitor.Start(ctx)
+	} else {
+		log.Printf("ERROR: adapters[models.NetworkTRON] is not *tron.Client, it is %T", adapters[models.NetworkTRON])
+	}
+
+	// 3. Load all existing deposit addresses from DB and register them with their respective scanners
+	assets, err := walletRepo.GetAssets(ctx)
+	if err == nil {
+		assetNetworkMap := make(map[int]models.Network)
+		for _, asset := range assets {
+			assetNetworkMap[asset.ID] = asset.Network
+		}
+
+		das, err := walletRepo.GetAllDepositAddresses(ctx)
+		if err == nil {
+			for _, da := range das {
+				network := assetNetworkMap[da.AssetID]
+				if scanner, ok := scanners[network]; ok {
+					scanner.AddAddress(da.Address)
+				}
+			}
+		} else {
+			log.Printf("ERROR loading deposit addresses: %v", err)
+		}
+	} else {
+		log.Printf("ERROR loading assets: %v", err)
 	}
 
 	// ── Handlers ──────────────────────────────────────────────────────────────

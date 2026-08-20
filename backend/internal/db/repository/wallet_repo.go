@@ -68,6 +68,31 @@ func (r *WalletRepo) GetAssetByID(ctx context.Context, id int) (*models.Asset, e
 	return &a, nil
 }
 
+// GetAssetByContractAddress looks up an asset by its on-chain contract address and network.
+// Used during deposit processing to resolve the correct asset for token transfers.
+func (r *WalletRepo) GetAssetByContractAddress(ctx context.Context, contractAddress string, network models.Network) (*models.Asset, error) {
+	query := `
+		SELECT id, symbol, name, network, standard, contract_address, decimals, is_active, logo_url
+		FROM assets
+		WHERE LOWER(contract_address) = LOWER($1)
+		  AND network = $2
+		  AND is_active = true
+		LIMIT 1
+	`
+	var a models.Asset
+	err := r.pool.QueryRow(ctx, query, contractAddress, network).Scan(
+		&a.ID, &a.Symbol, &a.Name, &a.Network, &a.Standard,
+		&a.ContractAddress, &a.Decimals, &a.IsActive, &a.LogoURL,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil // not found
+		}
+		return nil, fmt.Errorf("querying asset by contract address: %w", err)
+	}
+	return &a, nil
+}
+
 // GetBalances fetches all balances for a user.
 func (r *WalletRepo) GetBalances(ctx context.Context, userID uuid.UUID) ([]models.Balance, error) {
 	query := `
