@@ -1,0 +1,274 @@
+basePath: /api/v1
+definitions:
+  models.Swap:
+    properties:
+      created_at:
+        type: string
+      exchange_rate:
+        type: string
+      fee_amount:
+        type: string
+      from_amount:
+        type: string
+      from_asset_id:
+        type: integer
+      id:
+        type: string
+      to_amount:
+        type: string
+      to_asset_id:
+        type: integer
+      user_id:
+        type: string
+    type: object
+  models.SwapRequest:
+    properties:
+      amount:
+        description: The amount of from_asset to swap
+        type: string
+      from_asset_id:
+        type: integer
+      to_asset_id:
+        type: integer
+    type: object
+  models.SwapResponse:
+    properties:
+      swap:
+        $ref: '#/definitions/models.Swap'
+    type: object
+  services.SendRequest:
+    properties:
+      amount:
+        type: string
+      asset_id:
+        type: integer
+      note:
+        type: string
+      to_address:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Public API for integrating with the crypto exchange platform.
+  title: Crypto Exchange API
+  version: "1.0"
+paths:
+  /assets:
+    get:
+      consumes:
+      - application/json
+      description: Returns a list of all supported crypto and fiat assets along with
+        their current live prices.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of assets
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: List supported assets
+      tags:
+      - Assets
+  /v1/wallet/swap:
+    post:
+      consumes:
+      - application/json
+      description: Swap one asset for another internally
+      parameters:
+      - description: Swap Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.SwapRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.SwapResponse'
+      security:
+      - BearerAuth: []
+      summary: Swap assets
+      tags:
+      - wallet
+  /wallet/deposit/{assetID}:
+    get:
+      consumes:
+      - application/json
+      description: Generates or retrieves a permanent deposit address for a specific
+        asset ID.
+      parameters:
+      - description: Asset ID
+        in: path
+        name: assetID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Deposit Address
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get deposit address
+      tags:
+      - Wallet
+  /wallet/portfolio:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves the developer's wallet portfolio including asset balances
+        and their total USD value.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Portfolio data
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get wallet portfolio
+      tags:
+      - Wallet
+  /wallet/send:
+    post:
+      consumes:
+      - application/json
+      description: Processes an outbound crypto transfer to an external address. Requires
+        a secret key (sk_).
+      parameters:
+      - description: Send request payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/services.SendRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Transaction details
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Send crypto
+      tags:
+      - Wallet
+  /wallet/swap:
+    post:
+      consumes:
+      - application/json
+      description: Executes an internal swap between two supported assets based on
+        live prices. Requires a secret key (sk_).
+      parameters:
+      - description: Swap request payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.SwapRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Swap details
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Swap crypto
+      tags:
+      - Wallet
+  /wallet/transactions:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves paginated transaction history for the developer's account.
+      parameters:
+      - description: Number of records to return
+        in: query
+        name: limit
+        type: integer
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Filter by transaction type (e.g. deposit, withdrawal, swap)
+        in: query
+        name: type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of transactions
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: List transactions
+      tags:
+      - Wallet
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: X-API-Key
+    type: apiKey
+swagger: "2.0"

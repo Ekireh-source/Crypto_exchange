@@ -6,3 +6,6 @@ run: build
 
 test:
 	go test -v ./...
+
+swagger:
+	swag init -g main.go -o docs

@@ -13,8 +13,9 @@ import (
 // Config holds all application configuration loaded from environment variables.
 type Config struct {
 	// Server
-	Port string
-	Env  string
+	Port           string
+	Env            string
+	AllowedOrigins []string
 
 	// Auth
 	JWTSecret         string
@@ -75,6 +76,13 @@ func Load() (*Config, error) {
 	// ── Server ────────────────────────────────────────────────────────────────
 	cfg.Port = getEnvOrDefault("PORT", "8080")
 	cfg.Env = getEnvOrDefault("ENV", "development")
+	
+	originsStr := getEnvOrDefault("ALLOWED_ORIGINS", "http://localhost:3000")
+	var origins []string
+	for _, o := range strings.Split(originsStr, ",") {
+		origins = append(origins, strings.TrimSpace(o))
+	}
+	cfg.AllowedOrigins = origins
 
 	// ── Auth ──────────────────────────────────────────────────────────────────
 	cfg.JWTSecret = mustGetEnv("JWT_SECRET")

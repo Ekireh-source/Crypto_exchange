@@ -1,5 +1,15 @@
 package main
 
+// @title Crypto Exchange API
+// @version 1.0
+// @description Public API for integrating with the crypto exchange platform.
+// @host localhost:8080
+// @BasePath /api/v1
+
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name X-API-Key
+
 import (
 	"context"
 	"log"
@@ -54,7 +64,10 @@ func main() {
 	// Global middleware
 	e.Use(middleware.Recover())
 	e.Use(middleware.Logger())
-	e.Use(middleware.CORS())
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: cfg.AllowedOrigins,
+		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization, "X-API-Key"},
+	}))
 	e.Use(middleware.RequestID())
 
 	// ── Blockchain Adapters ───────────────────────────────────────────────────

@@ -404,17 +404,15 @@ func (r *WalletRepo) AddBalance(ctx context.Context, userID uuid.UUID, assetID i
 // GetStuckWithdrawals returns pending withdrawal transactions that were
 // created more than olderThan ago and are still in 'pending' status.
 // These are candidates for on-chain status checks and potential re-broadcast.
-func (r *WalletRepo) GetStuckWithdrawals(ctx context.Context, olderThan time.Duration) ([]models.Transaction, error) {
-	cutoff := time.Now().Add(-olderThan)
+func (r *WalletRepo) GetStuckWithdrawals(ctx context.Context, olderThan time.Duration, youngerThan time.Duration) ([]models.Transaction, error) {
+	cutoffOlder := time.Now().Add(-olderThan)
+	cutoffYounger := time.Now().Add(-youngerThan)
 	query := `
 		SELECT id, user_id, asset_id, type, status, amount, fee, tx_hash, from_address, to_address, note, sweep_status, created_at, confirmed_at
 		FROM transactions
-		WHERE type = 'withdrawal'
-		  AND status = 'pending'
-		  AND created_at < $1
-		ORDER BY created_at ASC
+		WHERE type = 'withdrawal' AND status = 'pending' AND created_at < $1 AND created_at > $2
 	`
-	rows, err := r.pool.Query(ctx, query, cutoff)
+	rows, err := r.pool.Query(ctx, query, cutoffOlder, cutoffYounger)
 	if err != nil {
 		return nil, fmt.Errorf("querying stuck withdrawals: %w", err)
 	}

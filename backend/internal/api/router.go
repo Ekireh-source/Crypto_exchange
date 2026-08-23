@@ -8,8 +8,10 @@ import (
 
 	"context"
 	"exchange/config"
+	_ "exchange/docs" // swagger docs
 	"exchange/internal/api/handlers"
 	"exchange/internal/api/middleware"
+	"github.com/swaggo/echo-swagger"
 	"exchange/internal/blockchain"
 	"exchange/internal/blockchain/bsc"
 	"exchange/internal/blockchain/tron"
@@ -111,6 +113,13 @@ func RegisterRoutes(e *echo.Echo, cfg *config.Config, pool *db.Pool, adapters ma
 	walletHandler := handlers.NewWalletHandler(walletSvc)
 	p2pHandler := handlers.NewP2PHandler(p2pSvc)
 
+	// ── Developer API Setup ───────────────────────────────────────────────────
+	apiKeyRepo := repository.NewAPIKeyRepo(pool)
+	apiKeySvc := services.NewAPIKeyService(apiKeyRepo)
+	webhookSvc := services.NewWebhookService(apiKeyRepo)
+	devHandler := handlers.NewDeveloperHandler(apiKeySvc, webhookSvc)
+	publicAPIHandler := handlers.NewPublicAPIHandler(walletSvc)
+
 	v1 := e.Group("/v1")
 
 	// ── Public Routes ─────────────────────────────────────────────────────────
@@ -119,7 +128,7 @@ func RegisterRoutes(e *echo.Echo, cfg *config.Config, pool *db.Pool, adapters ma
 	auth.POST("/login", authHandler.Login)
 	auth.POST("/refresh", authHandler.Refresh)
 
-	// ── Protected Routes ──────────────────────────────────────────────────────
+	// ── Protected Routes (JWT — your UI) ──────────────────────────────────────
 	protected := v1.Group("")
 	protected.Use(middleware.RequireAuth(cfg.JWTSecret))
 
@@ -146,6 +155,36 @@ func RegisterRoutes(e *echo.Echo, cfg *config.Config, pool *db.Pool, adapters ma
 	p2p.POST("/trades/:id/pay", p2pHandler.MarkTradePaid)
 	p2p.POST("/trades/:id/release", p2pHandler.ReleaseTrade)
 	p2p.POST("/trades/:id/cancel", p2pHandler.CancelTrade)
+
+	// ── Developer Portal Routes (JWT — for managing apps/keys) ────────────────
+	developer := protected.Group("/developer")
+	developer.POST("/apps", devHandler.CreateApp)
+	developer.GET("/apps", devHandler.ListApps)
+	developer.DELETE("/apps/:appID", devHandler.DeleteApp)
+	developer.PUT("/apps/:appID/status", devHandler.UpdateAppStatus)
+	developer.GET("/apps/:appID/keys", devHandler.ListKeys)
+	developer.POST("/apps/:appID/keys/regenerate", devHandler.RegenerateKeys)
+	developer.DELETE("/apps/:appID/keys/:keyID", devHandler.RevokeKey)
+	developer.GET("/apps/:appID/logs", devHandler.GetLogs)
+	developer.POST("/apps/:appID/webhooks", devHandler.CreateWebhook)
+	developer.GET("/apps/:appID/webhooks", devHandler.ListWebhooks)
+	developer.DELETE("/apps/:appID/webhooks/:webhookID", devHandler.DeleteWebhook)
+
+	// ── Swagger Documentation ─────────────────────────────────────────────────
+	e.GET("/swagger/*", echoSwagger.WrapHandler)
+
+	// ── Public Developer API (API Key auth — for third-party consumers) ───────
+	publicAPI := e.Group("/api/v1")
+	publicAPI.Use(middleware.RequireAPIKey(apiKeySvc))
+	publicAPI.Use(middleware.RateLimitByAPIKey())
+	publicAPI.Use(middleware.APIRequestLogger(apiKeySvc))
+
+	publicAPI.GET("/assets", publicAPIHandler.GetAssets)
+	publicAPI.GET("/wallet/portfolio", publicAPIHandler.GetPortfolio)
+	publicAPI.GET("/wallet/deposit/:assetID", publicAPIHandler.GetDepositAddress)
+	publicAPI.POST("/wallet/send", publicAPIHandler.SendCrypto)
+	publicAPI.POST("/wallet/swap", publicAPIHandler.SwapCrypto)
+	publicAPI.GET("/wallet/transactions", publicAPIHandler.GetTransactions)
 }
 
 // ErrorHandler formats HTTP errors as JSON instead of plaintext.

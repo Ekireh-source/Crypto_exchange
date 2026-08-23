@@ -170,6 +170,14 @@ export default function FloatingNavbar() {
                 <span>Settings</span>
               </DropdownMenuItem>
 
+              <DropdownMenuItem
+                onClick={() => router.push("/developer")}
+                className="rounded-lg h-11 gap-3 font-medium text-[#e2e4e9] hover:bg-[#22252e] focus:bg-[#22252e] cursor-pointer px-3 mt-1"
+              >
+                <Icon icon="hugeicons:api" className="size-5 text-[#888c99]" />
+                <span>Developer Portal</span>
+              </DropdownMenuItem>
+
               <DropdownMenuSeparator className="bg-[#22252e] mx-1" />
 
               <DropdownMenuItem

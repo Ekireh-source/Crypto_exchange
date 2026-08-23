@@ -19,6 +19,10 @@ const (
 	// before we consider it "stuck" and check/retry it on-chain.
 	withdrawalStalenessThreshold = 10 * time.Minute
 
+	// withdrawalMaxAge is the maximum time we will attempt to retry a stuck tx.
+	// After this, it will just sit in 'pending' so we don't retry infinitely on restarts.
+	withdrawalMaxAge = 6 * time.Hour
+
 	// withdrawalPollInterval is how often the monitor runs.
 	withdrawalPollInterval = 5 * time.Minute
 
@@ -91,7 +95,7 @@ func (m *WithdrawalMonitor) Stop() {
 // processStuckWithdrawals fetches pending withdrawals that haven't confirmed
 // within withdrawalStalenessThreshold and acts on each one.
 func (m *WithdrawalMonitor) processStuckWithdrawals(ctx context.Context) {
-	txs, err := m.walletDB.GetStuckWithdrawals(ctx, withdrawalStalenessThreshold)
+	txs, err := m.walletDB.GetStuckWithdrawals(ctx, withdrawalStalenessThreshold, withdrawalMaxAge)
 	if err != nil {
 		log.Printf("WithdrawalMonitor ERROR fetching stuck withdrawals: %v", err)
 		return
@@ -140,7 +144,13 @@ func (m *WithdrawalMonitor) handleStuckWithdrawal(ctx context.Context, tx *model
 		return m.walletDB.UpdateTransactionStatus(ctx, tx.ID, models.TxConfirmed, *tx.TxHash)
 	}
 
-	// 2. Still pending — re-broadcast with bumped gas.
+	// Disable automatic retries for TRON to prevent double spends due to lack of RBF (replace-by-fee).
+	if asset.Network == models.NetworkTRON {
+		log.Printf("WithdrawalMonitor: tx %s (on-chain: %s) is still pending on TRON. Automatic retry disabled to prevent double-spends.", tx.ID, *tx.TxHash)
+		return nil
+	}
+
+	// 2. Still pending — re-broadcast with bumped gas (EVM chains only).
 	log.Printf("WithdrawalMonitor: tx %s (on-chain: %s) is still pending — re-broadcasting with %d%% gas bump",
 		tx.ID, *tx.TxHash, gasBumpPercent)
 
