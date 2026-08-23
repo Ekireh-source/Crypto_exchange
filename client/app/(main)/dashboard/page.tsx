@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import SupportedAssets from '@/components/commons/dashboard/supportedassets';
 import QuickActions from '@/components/commons/dashboard/quickactions';
+import Watchlist from '@/components/commons/dashboard/watchlist';
 import { Icon } from '@iconify/react';
 import Image from 'next/image';
 import { walletService } from '@/feature/wallet/wallet.service';
@@ -111,21 +112,7 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            <div className="flex flex-col items-center justify-center py-10 px-4">
-              <div className="relative mb-6">
-                <div className="size-16 bg-[#16181d] rounded-full flex items-center justify-center">
-                  <Icon icon="hugeicons:add-01" className="size-6 text-[#888c99]" />
-                </div>
-                {/* Decorative dots to match picture */}
-                <div className="absolute top-0 right-0 size-4 rounded-full bg-blue-500/20" />
-                <div className="absolute bottom-0 left-0 size-3 rounded-full bg-emerald-500/20" />
-              </div>
-              <h4 className="text-[17px] font-bold text-white mb-2">Build your watchlist</h4>
-              <p className="text-[14px] text-[#888c99] mb-8 text-center">Keep track of crypto prices by adding assets to your watchlist</p>
-              <button className="w-full bg-[#16181d] hover:bg-[#1a1c23] border border-[#22252e] text-white font-semibold text-[15px] rounded-[12px] h-[48px] transition-colors">
-                Add to watchlist
-              </button>
-            </div>
+            <Watchlist />
           </div>
 
           <SupportedAssets />

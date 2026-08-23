@@ -76,6 +76,11 @@ type BlockchainAdapter interface {
 	// since the given block number. Implementations should cap the range to
 	// avoid oversized RPC responses.
 	GetIncomingTransactions(ctx context.Context, address string, fromBlock int64) ([]IncomingTx, error)
+
+	// GetTxStatus checks whether a previously broadcast transaction has been
+	// confirmed on-chain. Returns (true, nil) if confirmed, (false, nil) if
+	// still pending, and (false, err) if the lookup itself failed.
+	GetTxStatus(ctx context.Context, txHash string) (confirmed bool, err error)
 }
 
 // DepositScanner is an interface for background jobs that watch the blockchain for deposits.

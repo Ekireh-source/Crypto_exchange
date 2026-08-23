@@ -40,7 +40,7 @@ export default function SupportedAssets() {
 
   // Filter out a few to show as highlighted crypto, like BTC, ETH (fallback to what we have if BTC/ETH aren't there)
   // Or just slice the first 3 active assets
-  const highlightedCrypto = assets.slice(0, 3);
+  const highlightedCrypto = assets;
 
   return (
     <div className="w-full rounded-[24px] bg-[#13151a] border border-[#22252e] overflow-hidden flex flex-col font-sans">

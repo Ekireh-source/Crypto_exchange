@@ -182,3 +182,26 @@ func generateReferralCode() (string, error) {
 	}
 	return hex.EncodeToString(b), nil
 }
+
+// GetProfile fetches the user's profile, referral stats, and referred users.
+func (s *AuthService) GetProfile(ctx context.Context, userID uuid.UUID) (*models.User, *models.ReferralStats, []*models.User, error) {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("fetching user profile: %w", err)
+	}
+	if user == nil {
+		return nil, nil, nil, errors.New("user not found")
+	}
+
+	stats, err := s.userRepo.GetReferralStats(ctx, userID, user.ReferralCode)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("fetching referral stats: %w", err)
+	}
+
+	referredUsers, err := s.userRepo.GetReferredUsers(ctx, userID)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("fetching referred users: %w", err)
+	}
+
+	return user, stats, referredUsers, nil
+}

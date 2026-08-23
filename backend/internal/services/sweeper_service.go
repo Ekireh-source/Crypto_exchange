@@ -17,6 +17,7 @@ import (
 type SweeperService struct {
 	cfg        *config.Config
 	walletDB   *repository.WalletRepo
+	priceSvc   *PriceService
 	adapters   map[models.Network]blockchain.BlockchainAdapter
 	pollTicker *time.Ticker
 	quit       chan struct{}
@@ -25,11 +26,13 @@ type SweeperService struct {
 func NewSweeperService(
 	cfg *config.Config,
 	walletDB *repository.WalletRepo,
+	priceSvc *PriceService,
 	adapters map[models.Network]blockchain.BlockchainAdapter,
 ) *SweeperService {
 	return &SweeperService{
 		cfg:      cfg,
 		walletDB: walletDB,
+		priceSvc: priceSvc,
 		adapters: adapters,
 		quit:     make(chan struct{}),
 	}
@@ -81,8 +84,24 @@ func (s *SweeperService) processPendingSweeps(ctx context.Context) {
 			continue
 		}
 
-		// 3.2 Minimum Value Checks (To be implemented with Price Service)
-		// ...
+		// 3.2 Minimum Value Check: skip deposits whose USD value is below the
+		// sweep threshold to avoid paying more in gas than we recover.
+		if s.priceSvc != nil && s.cfg.MinSweepUSDThreshold > 0 {
+			prices, priceErr := s.priceSvc.GetPrices(ctx, nil)
+			if priceErr == nil {
+				if price, ok := prices[asset.Symbol]; ok && price > 0 {
+					depositAmt, _, amtErr := new(big.Float).Parse(tx.Amount, 10)
+					if amtErr == nil {
+						depositUSD, _ := new(big.Float).Mul(depositAmt, big.NewFloat(price)).Float64()
+						if depositUSD < s.cfg.MinSweepUSDThreshold {
+							log.Printf("SweeperService: tx %s value $%.4f is below threshold $%.2f — skipping sweep",
+								tx.ID, depositUSD, s.cfg.MinSweepUSDThreshold)
+							continue
+						}
+					}
+				}
+			}
+		}
 
 		if asset.ContractAddress == nil {
 			// Native coin sweep (BNB/TRX)

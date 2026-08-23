@@ -49,8 +49,9 @@ export default function FloatingNavbar() {
 
   const ALL_LINKS = [
     { label: "Home", icon: "hugeicons:home-03", href: "/dashboard" },
+    { label: "P2P", icon: "hugeicons:trade-up", href: "/p2p" },
     { label: "Trade", icon: "hugeicons:chart-line-up-01", href: "/trade" },
-    { label: "Lend", icon: "hugeicons:money-send-square", href: "/lend" },
+    { label: "Swap", icon: "hugeicons:arrow-turn-backward", href: "/swap" },
     { label: "Transactions", icon: "hugeicons:bitcoin-transaction", href: "/transactions" },
     { label: "See more", icon: "hugeicons:more", href: "/more" },
   ];
@@ -154,6 +155,14 @@ export default function FloatingNavbar() {
               <DropdownMenuSeparator className="bg-[#22252e] mx-1" />
                
               <DropdownMenuItem
+                onClick={() => router.push("/profile")}
+                className="rounded-lg h-11 gap-3 font-medium text-[#e2e4e9] hover:bg-[#22252e] focus:bg-[#22252e] cursor-pointer px-3 mt-1"
+              >
+                <Icon icon="hugeicons:user" className="size-5 text-[#888c99]" />
+                <span>Profile</span>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
                 onClick={() => router.push("/settings")}
                 className="rounded-lg h-11 gap-3 font-medium text-[#e2e4e9] hover:bg-[#22252e] focus:bg-[#22252e] cursor-pointer px-3 mt-1"
               >
@@ -207,6 +216,16 @@ export default function FloatingNavbar() {
               );
             })}
             <div className="h-[1px] bg-[#22252e] my-2 mx-2" />
+            <div
+              onClick={() => {
+                setMenuOpen(false);
+                router.push("/profile");
+              }}
+              className="cursor-pointer rounded-xl px-4 py-3 text-[15px] font-semibold text-[#e2e4e9] hover:bg-[#22252e] transition-colors flex items-center gap-3"
+            >
+              <Icon icon="hugeicons:user" className="size-5" />
+              Profile
+            </div>
             <div
               onClick={() => {
                 setMenuOpen(false);

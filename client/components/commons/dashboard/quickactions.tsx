@@ -29,18 +29,7 @@ export default function QuickActions() {
       icon: 'hugeicons:arrow-down-01',
       onClick: () => setIsReceiveOpen(true),
     },
-    {
-      id: 'deposit',
-      label: 'Deposit cash',
-      icon: 'hugeicons:building-03',
-      onClick: () => setIsReceiveOpen(true),
-    },
-    {
-      id: 'withdraw',
-      label: 'Withdraw cash',
-      icon: 'hugeicons:credit-card-01',
-      onClick: () => setIsSendOpen(true),
-    },
+
   ];
 
   return (

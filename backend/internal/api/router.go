@@ -6,6 +6,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
+	"context"
 	"exchange/config"
 	"exchange/internal/api/handlers"
 	"exchange/internal/api/middleware"
@@ -16,7 +17,6 @@ import (
 	"exchange/internal/db/repository"
 	"exchange/internal/models"
 	"exchange/internal/services"
-	"context"
 	"log"
 	"time"
 )
@@ -26,18 +26,22 @@ func RegisterRoutes(e *echo.Echo, cfg *config.Config, pool *db.Pool, adapters ma
 	// ── Repositories ──────────────────────────────────────────────────────────
 	userRepo := repository.NewUserRepo(pool)
 	walletRepo := repository.NewWalletRepo(pool)
+	p2pRepo := repository.NewP2PRepo(pool)
 
 	// ── Services ──────────────────────────────────────────────────────────────
 	authSvc := services.NewAuthService(cfg, userRepo)
 	priceSvc := services.NewPriceService(cfg.CoinGeckoAPIKey)
 	walletSvc := services.NewWalletService(cfg, walletRepo, priceSvc, adapters, scanners)
-	sweeperSvc := services.NewSweeperService(cfg, walletRepo, adapters)
+	sweeperSvc := services.NewSweeperService(cfg, walletRepo, priceSvc, adapters)
+	withdrawalMonitor := services.NewWithdrawalMonitor(cfg, walletRepo, walletSvc, adapters)
+	p2pSvc := services.NewP2PService(p2pRepo)
 
 	// ── Background Scanners ───────────────────────────────────────────────────
 	ctx := context.Background()
 
-	// 0. Start Sweeper Service
+	// 0. Start Sweeper Service and Withdrawal Monitor
 	sweeperSvc.Start(ctx)
+	withdrawalMonitor.Start(ctx)
 
 	// 1. Initialize BSC Monitor
 	if bscAdapter, ok := adapters[models.NetworkBSC].(*bsc.Client); ok {
@@ -52,7 +56,7 @@ func RegisterRoutes(e *echo.Echo, cfg *config.Config, pool *db.Pool, adapters ma
 			} else {
 				log.Printf("Successfully processed BSC deposit for tx: %s", tx.TxHash)
 			}
-		}, 3*time.Second)
+		}, 3*time.Second, cfg.BSCMinConfirmations)
 		scanners[models.NetworkBSC] = monitor
 		go monitor.Start(ctx)
 	} else {
@@ -72,7 +76,7 @@ func RegisterRoutes(e *echo.Echo, cfg *config.Config, pool *db.Pool, adapters ma
 			} else {
 				log.Printf("Successfully processed TRON deposit for tx: %s", tx.TxHash)
 			}
-		}, 3*time.Second)
+		}, 3*time.Second, cfg.TronMinConfirmations)
 		scanners[models.NetworkTRON] = monitor
 		go monitor.Start(ctx)
 	} else {
@@ -105,6 +109,7 @@ func RegisterRoutes(e *echo.Echo, cfg *config.Config, pool *db.Pool, adapters ma
 	// ── Handlers ──────────────────────────────────────────────────────────────
 	authHandler := handlers.NewAuthHandler(authSvc)
 	walletHandler := handlers.NewWalletHandler(walletSvc)
+	p2pHandler := handlers.NewP2PHandler(p2pSvc)
 
 	v1 := e.Group("/v1")
 
@@ -117,13 +122,30 @@ func RegisterRoutes(e *echo.Echo, cfg *config.Config, pool *db.Pool, adapters ma
 	// ── Protected Routes ──────────────────────────────────────────────────────
 	protected := v1.Group("")
 	protected.Use(middleware.RequireAuth(cfg.JWTSecret))
-	
+
 	wallet := protected.Group("/wallet")
 	wallet.GET("/assets", walletHandler.GetAssets)
 	wallet.GET("/portfolio", walletHandler.GetPortfolio)
 	wallet.GET("/deposit/:assetID", walletHandler.GetDepositAddress)
 	wallet.POST("/send", walletHandler.SendCrypto)
+	wallet.POST("/swap", walletHandler.HandleSwap)
 	wallet.GET("/transactions", walletHandler.GetTransactions)
+	wallet.GET("/transactions/:id", walletHandler.GetTransaction)
+	wallet.GET("/watchlist", walletHandler.GetWatchlist)
+	wallet.POST("/watchlist/toggle", walletHandler.ToggleWatchlist)
+
+	user := protected.Group("/user")
+	user.GET("/profile", authHandler.GetProfile)
+
+	p2p := protected.Group("/p2p")
+	p2p.POST("/orders", p2pHandler.CreateOrder)
+	p2p.GET("/orders", p2pHandler.ListActiveOrders)
+	p2p.POST("/orders/:id/trade", p2pHandler.CreateTrade)
+	p2p.GET("/trades", p2pHandler.ListUserTrades)
+	p2p.GET("/trades/:id", p2pHandler.GetTrade)
+	p2p.POST("/trades/:id/pay", p2pHandler.MarkTradePaid)
+	p2p.POST("/trades/:id/release", p2pHandler.ReleaseTrade)
+	p2p.POST("/trades/:id/cancel", p2pHandler.CancelTrade)
 }
 
 // ErrorHandler formats HTTP errors as JSON instead of plaintext.

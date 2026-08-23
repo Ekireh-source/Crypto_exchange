@@ -4,25 +4,50 @@ import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Icon } from '@iconify/react';
 import { assetsService } from '@/feature/assets/assets.service';
+import { walletService } from '@/feature/wallet/wallet.service';
 import { type Asset } from '@/feature/assets/assets.schema';
 
 export default function AssetsPage() {
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [watchlist, setWatchlist] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchAssets = async () => {
+    const fetchData = async () => {
       try {
-        const data = await assetsService.getAssets();
-        setAssets(data);
+        const [assetsData, watchlistData] = await Promise.all([
+          assetsService.getAssets(),
+          walletService.getWatchlist().catch(() => [])
+        ]);
+        setAssets(assetsData);
+        setWatchlist(watchlistData);
       } catch (error) {
-        console.error('Failed to fetch assets:', error);
+        console.error('Failed to fetch data:', error);
       } finally {
         setLoading(false);
       }
     };
-    fetchAssets();
+    fetchData();
   }, []);
+
+  const handleToggleWatchlist = async (e: React.MouseEvent, assetId: number) => {
+    e.stopPropagation();
+    
+    // Optimistic update
+    setWatchlist(prev => 
+      prev.includes(assetId) ? prev.filter(id => id !== assetId) : [...prev, assetId]
+    );
+
+    try {
+      await walletService.toggleWatchlist(assetId);
+    } catch (err) {
+      console.error('Failed to toggle watchlist:', err);
+      // Revert if failed (simplistic revert)
+      setWatchlist(prev => 
+        prev.includes(assetId) ? prev.filter(id => id !== assetId) : [...prev, assetId]
+      );
+    }
+  };
 
   return (
     <div className="flex flex-col w-full animate-in fade-in duration-500 pb-20">
@@ -65,9 +90,11 @@ export default function AssetsPage() {
                     </div>
                   </div>
 
-                  {/* Market Price (Mocked for now since DB lacks live prices) */}
+                  {/* Market Price */}
                   <div className="col-span-2 flex items-center">
-                    <span className="text-[15px] font-medium text-white">—</span>
+                    <span className="text-[15px] font-medium text-white">
+                      {asset.current_price ? `$${asset.current_price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })}` : '—'}
+                    </span>
                   </div>
 
                   {/* Volume */}
@@ -87,13 +114,16 @@ export default function AssetsPage() {
                     </span>
                   </div>
 
-                  {/* Actions (Buy & Star) */}
-                  <div className="col-span-1 flex items-center justify-end gap-6 pr-4">
-                    <button className="text-[15px] font-semibold text-[#4f7cf7] hover:text-[#3f6be7] transition-colors">
-                      Buy
-                    </button>
-                    <button className="text-[#888c99] hover:text-white transition-colors">
-                      <Icon icon="hugeicons:star" className="size-5" />
+                  {/* Action / Watchlist */}
+                  <div className="col-span-1 flex items-center justify-end pr-2">
+                    <button 
+                      onClick={(e) => handleToggleWatchlist(e, asset.id)}
+                      className="p-2 rounded-full hover:bg-[#22252e] transition-colors"
+                    >
+                      <Icon 
+                        icon={watchlist.includes(asset.id) ? "hugeicons:star" : "hugeicons:star"} 
+                        className={`size-5 transition-colors ${watchlist.includes(asset.id) ? 'text-yellow-400 fill-yellow-400' : 'text-[#888c99] hover:text-white'}`} 
+                      />
                     </button>
                   </div>
                 </div>

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -44,7 +45,19 @@ func NewWalletService(
 
 // GetAssets fetches all active supported assets.
 func (s *WalletService) GetAssets(ctx context.Context) ([]models.Asset, error) {
-	return s.walletDB.GetAssets(ctx)
+	assets, err := s.walletDB.GetAssets(ctx)
+	if err != nil {
+		return nil, err
+	}
+	
+	if s.priceSvc != nil {
+		prices, _ := s.priceSvc.GetPrices(ctx, nil)
+		for i := range assets {
+			assets[i].CurrentPrice = prices[assets[i].Symbol]
+		}
+	}
+	
+	return assets, nil
 }
 
 // GetPortfolio returns the aggregated balance and USD value for a user.
@@ -64,7 +77,12 @@ func (s *WalletService) GetPortfolio(ctx context.Context, userID uuid.UUID) ([]m
 		balanceMap[b.AssetID] = b
 	}
 
-	// prices, _ := s.priceSvc.GetPrices(ctx, nil)
+	var prices map[string]float64
+	if s.priceSvc != nil {
+		prices, _ = s.priceSvc.GetPrices(ctx, nil)
+	} else {
+		prices = make(map[string]float64)
+	}
 
 	var portfolio []models.AssetBalance
 	var totalUSD float64
@@ -82,17 +100,21 @@ func (s *WalletService) GetPortfolio(ctx context.Context, userID uuid.UUID) ([]m
 			locked = bal.Locked
 		}
 
-		// price := prices[asset.Symbol]
-		// In a real app, you'd parse `available` to float for multiplication
-		// Assuming available is string, we should parse it to big.Float
-		// But for now, we'll keep it simple as a prototype. Let's just assume it parses.
-		// (Skipping precise float calculation here for brevity, assuming available = 0 for now)
+		price := prices[asset.Symbol]
+		
+		// Parse available as float64 to calculate USD value
+		availableFloat, _ := strconv.ParseFloat(available, 64)
+		usdValue := availableFloat * price
+		totalUSD += usdValue
+
+		// Also populate CurrentPrice so the portfolio includes the live price
+		asset.CurrentPrice = price
 
 		ab := models.AssetBalance{
 			Asset:     asset,
 			Available: available,
 			Locked:    locked,
-			USDValue:  0, // TODO: multiply available * price
+			USDValue:  usdValue,
 		}
 		portfolio = append(portfolio, ab)
 	}
@@ -300,6 +322,26 @@ func (s *WalletService) SendCrypto(ctx context.Context, userID uuid.UUID, req Se
 	return tx, nil
 }
 
+// GetTransactionByID fetches a single transaction by its ID for the authenticated user.
+func (s *WalletService) GetTransactionByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*models.Transaction, error) {
+	return s.walletDB.GetTransactionByID(ctx, id, userID)
+}
+
+// GetSwapByID fetches a single swap by its ID for the authenticated user.
+func (s *WalletService) GetSwapByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*models.SwapRecord, error) {
+	return s.walletDB.GetSwapByID(ctx, id, userID)
+}
+
+// GetWatchlist returns a list of watched asset IDs.
+func (s *WalletService) GetWatchlist(ctx context.Context, userID uuid.UUID) ([]int, error) {
+	return s.walletDB.GetWatchlist(ctx, userID)
+}
+
+// ToggleWatchlist toggles the watched status of an asset.
+func (s *WalletService) ToggleWatchlist(ctx context.Context, userID uuid.UUID, assetID int) error {
+	return s.walletDB.ToggleWatchlist(ctx, userID, assetID)
+}
+
 // ProcessDeposit is called by the background blockchain monitor when a verified inbound transfer is detected.
 func (s *WalletService) ProcessDeposit(ctx context.Context, tx blockchain.IncomingTx) error {
 	userID, addrAssetID, err := s.walletDB.GetUserByDepositAddress(ctx, tx.ToAddress)
@@ -405,4 +447,81 @@ func (s *WalletService) GetTransactions(ctx context.Context, userID uuid.UUID, l
 	offset := (page - 1) * limit
 
 	return s.walletDB.GetTransactions(ctx, userID, limit, offset, txType)
+}
+
+// SwapCrypto executes an internal market swap between two assets.
+func (s *WalletService) SwapCrypto(ctx context.Context, userID uuid.UUID, req models.SwapRequest) (*models.Swap, error) {
+	if req.FromAssetID == req.ToAssetID {
+		return nil, fmt.Errorf("cannot swap the same asset")
+	}
+
+	fromAmount, ok := new(big.Float).SetString(req.Amount)
+	if !ok || fromAmount.Cmp(big.NewFloat(0)) <= 0 {
+		return nil, fmt.Errorf("invalid swap amount")
+	}
+
+	fromAsset, err := s.walletDB.GetAssetByID(ctx, req.FromAssetID)
+	if err != nil || fromAsset == nil {
+		return nil, fmt.Errorf("invalid from_asset")
+	}
+
+	toAsset, err := s.walletDB.GetAssetByID(ctx, req.ToAssetID)
+	if err != nil || toAsset == nil {
+		return nil, fmt.Errorf("invalid to_asset")
+	}
+
+	// Verify balance
+	balances, err := s.walletDB.GetBalances(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("fetching balances: %w", err)
+	}
+	var userBal *big.Float
+	for _, b := range balances {
+		if b.AssetID == req.FromAssetID {
+			userBal, _ = new(big.Float).SetString(b.Available)
+			break
+		}
+	}
+	if userBal == nil || userBal.Cmp(fromAmount) < 0 {
+		return nil, fmt.Errorf("insufficient balance for swap")
+	}
+
+	// Fetch prices
+	if s.priceSvc == nil {
+		return nil, fmt.Errorf("pricing service unavailable")
+	}
+	prices, err := s.priceSvc.GetPrices(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("fetching prices: %w", err)
+	}
+	fromPrice := prices[fromAsset.Symbol]
+	toPrice := prices[toAsset.Symbol]
+
+	if fromPrice <= 0 || toPrice <= 0 {
+		return nil, fmt.Errorf("market prices unavailable for swap pair")
+	}
+
+	// Calculate swap values
+	exchangeRate := fromPrice / toPrice
+	grossToAmount := new(big.Float).Mul(fromAmount, big.NewFloat(exchangeRate))
+	
+	feeRate := s.cfg.ExchangeFeeRate // e.g., 0.001 for 0.1%
+	feeAmount := new(big.Float).Mul(grossToAmount, big.NewFloat(feeRate))
+	netToAmount := new(big.Float).Sub(grossToAmount, feeAmount)
+
+	swap := &models.Swap{
+		UserID:       userID,
+		FromAssetID:  req.FromAssetID,
+		ToAssetID:    req.ToAssetID,
+		FromAmount:   fromAmount.Text('f', 8),
+		ToAmount:     netToAmount.Text('f', 8),
+		ExchangeRate: fmt.Sprintf("%f", exchangeRate),
+		FeeAmount:    feeAmount.Text('f', 8),
+	}
+
+	if err := s.walletDB.ExecuteSwap(ctx, swap); err != nil {
+		return nil, fmt.Errorf("executing swap: %w", err)
+	}
+
+	return swap, nil
 }

@@ -95,3 +95,56 @@ func (r *UserRepo) GetByReferralCode(ctx context.Context, code string) (*models.
 	}
 	return u, nil
 }
+
+// GetReferralStats calculates basic referral stats for a user.
+func (r *UserRepo) GetReferralStats(ctx context.Context, userID uuid.UUID, referralCode string) (*models.ReferralStats, error) {
+	query := `
+		SELECT count(*)
+		FROM users
+		WHERE referred_by = $1
+	`
+	var teamCount int
+	err := r.pool.QueryRow(ctx, query, userID).Scan(&teamCount)
+	if err != nil {
+		return nil, fmt.Errorf("counting referrals: %w", err)
+	}
+
+	return &models.ReferralStats{
+		ReferralCode: referralCode,
+		ReferralLink: fmt.Sprintf("https://xxhange.com/register?ref=%s", referralCode),
+		TeamCount:    teamCount,
+		FeeEarnings:  0,
+		TotalVolume:  0,
+	}, nil
+}
+
+// GetReferredUsers returns a list of users referred by a specific user.
+func (r *UserRepo) GetReferredUsers(ctx context.Context, userID uuid.UUID) ([]*models.User, error) {
+	query := `
+		SELECT id, email, phone, kyc_status, created_at
+		FROM users
+		WHERE referred_by = $1
+		ORDER BY created_at DESC
+	`
+	rows, err := r.pool.Query(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("querying referred users: %w", err)
+	}
+	defer rows.Close()
+
+	var users []*models.User
+	for rows.Next() {
+		u := &models.User{}
+		// Scan only the fields we selected. Other fields will be zero/empty.
+		if err := rows.Scan(&u.ID, &u.Email, &u.Phone, &u.KYCStatus, &u.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scanning referred user: %w", err)
+		}
+		users = append(users, u)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows error for referred users: %w", err)
+	}
+
+	return users, nil
+}
+

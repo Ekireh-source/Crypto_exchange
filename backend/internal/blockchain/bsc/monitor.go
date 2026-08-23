@@ -24,33 +24,41 @@ type OnDepositFunc func(tx blockchain.IncomingTx)
 // Monitor watches a set of deposit addresses for inbound BNB and BEP-20
 // transfers. It polls via eth_getLogs every pollInterval.
 type Monitor struct {
-	client          *Client
-	mu              sync.RWMutex
-	addresses       map[common.Address]bool // set of deposit addresses to watch
-	tokenContracts  []common.Address        // BEP-20 contracts to watch
-	onDeposit       OnDepositFunc
-	pollInterval    time.Duration
-	lastBlock       int64
+	client           *Client
+	mu               sync.RWMutex
+	addresses        map[common.Address]bool // set of deposit addresses to watch
+	tokenContracts   []common.Address        // BEP-20 contracts to watch
+	onDeposit        OnDepositFunc
+	pollInterval     time.Duration
+	minConfirmations int64 // minimum blocks before a deposit is considered safe
+	lastBlock        int64
 }
 
 // NewMonitor creates a deposit monitor.
 // tokenContracts is the list of BEP-20 contract addresses to listen on.
+// minConfirmations is the number of block confirmations required before a
+// deposit is reported to the service layer (prevents double-spend attacks).
 func NewMonitor(
 	client *Client,
 	tokenContracts []string,
 	onDeposit OnDepositFunc,
 	pollInterval time.Duration,
+	minConfirmations int64,
 ) *Monitor {
 	contracts := make([]common.Address, len(tokenContracts))
 	for i, c := range tokenContracts {
 		contracts[i] = common.HexToAddress(c)
 	}
+	if minConfirmations <= 0 {
+		minConfirmations = 15 // safe default for BSC
+	}
 	return &Monitor{
-		client:         client,
-		addresses:      make(map[common.Address]bool),
-		tokenContracts: contracts,
-		onDeposit:      onDeposit,
-		pollInterval:   pollInterval,
+		client:           client,
+		addresses:        make(map[common.Address]bool),
+		tokenContracts:   contracts,
+		onDeposit:        onDeposit,
+		pollInterval:     pollInterval,
+		minConfirmations: minConfirmations,
 	}
 }
 
@@ -102,21 +110,28 @@ func (m *Monitor) poll(ctx context.Context) error {
 		return fmt.Errorf("fetching block number: %w", err)
 	}
 
+	// safeBlock is the highest block we will process this poll.
+	// We require minConfirmations blocks on top of each processed block so that
+	// a chain reorg cannot reverse a deposit we have already credited.
+	safeBlock := int64(currentBlock) - m.minConfirmations
+
 	if m.lastBlock == 0 {
 		// First poll — start from 50 blocks back to catch recent deposits.
-		m.lastBlock = int64(currentBlock) - 50
+		m.lastBlock = safeBlock - 50
 	}
 
 	if m.lastBlock < 0 {
 		m.lastBlock = 0
 	}
 
-	if int64(currentBlock) <= m.lastBlock {
+	if safeBlock <= m.lastBlock {
+		// Not enough new confirmed blocks yet — wait for the next poll.
 		return nil
 	}
 
 	// ── 1. Native Transfers (ETH/BNB) ─────────────────────────────────────────
-	for i := m.lastBlock + 1; i <= int64(currentBlock); i++ {
+	// Only scan blocks up to safeBlock — blocks beyond that lack enough confirmations.
+	for i := m.lastBlock + 1; i <= safeBlock; i++ {
 		block, err := m.client.rpc.BlockByNumber(ctx, big.NewInt(i))
 		if err != nil {
 			log.Printf("bsc monitor: error fetching block %d: %v", i, err)
@@ -169,7 +184,7 @@ func (m *Monitor) poll(ctx context.Context) error {
 	for _, contract := range m.tokenContracts {
 		query := ethereum.FilterQuery{
 			FromBlock: big.NewInt(m.lastBlock + 1),
-			ToBlock:   big.NewInt(int64(currentBlock)),
+			ToBlock:   big.NewInt(safeBlock), // cap at safeBlock for confirmation safety
 			Addresses: []common.Address{contract},
 			Topics:    [][]common.Hash{{transferSig}},
 		}
@@ -212,6 +227,6 @@ func (m *Monitor) poll(ctx context.Context) error {
 		}
 	}
 
-	m.lastBlock = int64(currentBlock)
+	m.lastBlock = safeBlock
 	return nil
 }

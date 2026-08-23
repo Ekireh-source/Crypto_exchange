@@ -30,6 +30,7 @@ type Asset struct {
 	Decimals        int           `db:"decimals"         json:"decimals"`        // e.g. 18 for BEP20, 6 for TRC20 USDT
 	IsActive        bool          `db:"is_active"        json:"is_active"`
 	LogoURL         string        `db:"logo_url"         json:"logo_url"`
+	CurrentPrice    float64       `db:"-"                json:"current_price,omitempty"`
 }
 
 // IsNative returns true when the asset is the chain's gas/native coin.
@@ -51,6 +52,7 @@ func SeedAssets() []Asset {
 			Standard: StandardNative,
 			Decimals: 18,
 			IsActive: true,
+			LogoURL:  "https://cryptologos.cc/logos/bnb-bnb-logo.png",
 		},
 		{
 			Symbol:          "USDT",
@@ -60,6 +62,7 @@ func SeedAssets() []Asset {
 			ContractAddress: &usdtBSCContract,
 			Decimals:        18,
 			IsActive:        true,
+			LogoURL:         "https://cryptologos.cc/logos/tether-usdt-logo.png",
 		},
 		{
 			Symbol:   "TRX",
@@ -68,6 +71,7 @@ func SeedAssets() []Asset {
 			Standard: StandardNative,
 			Decimals: 6,
 			IsActive: true,
+			LogoURL:  "https://cryptologos.cc/logos/tron-trx-logo.png",
 		},
 		{
 			Symbol:          "USDT",
@@ -77,6 +81,7 @@ func SeedAssets() []Asset {
 			ContractAddress: &usdtTRXContract,
 			Decimals:        6,
 			IsActive:        true,
+			LogoURL:         "https://cryptologos.cc/logos/tether-usdt-logo.png",
 		},
 	}
 }
