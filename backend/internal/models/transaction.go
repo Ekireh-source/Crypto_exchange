@@ -40,9 +40,21 @@ type Transaction struct {
 	FromAddress *string    `db:"from_address" json:"from_address"`
 	ToAddress   *string    `db:"to_address"   json:"to_address"`
 	Note        *string    `db:"note"         json:"note"`
+	SweepStatus SweepStatus `db:"sweep_status" json:"sweep_status"`
 	CreatedAt   time.Time  `db:"created_at"   json:"created_at"`
 	ConfirmedAt *time.Time `db:"confirmed_at" json:"confirmed_at"`
 }
+
+// SweepStatus tracks the background sweep lifecycle of a deposit.
+type SweepStatus string
+
+const (
+	SweepNotNeeded    SweepStatus = "NOT_NEEDED"
+	SweepPendingSweep SweepStatus = "PENDING_SWEEP"
+	SweepPendingGas   SweepStatus = "PENDING_GAS"
+	SweepSweeping     SweepStatus = "SWEEPING"
+	SweepCompleted    SweepStatus = "COMPLETED"
+)
 
 // SwapRecord links two transaction rows (debit + credit) for a swap operation.
 type SwapRecord struct {

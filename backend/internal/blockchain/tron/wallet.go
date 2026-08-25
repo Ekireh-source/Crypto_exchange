@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"golang.org/x/crypto/ripemd160" //nolint:staticcheck // TRON protocol requirement
@@ -43,6 +44,7 @@ func (c *Client) GenerateWallet() (address string, privateKeyHex string, err err
 
 // privateKeyToTronAddress derives the TRON address from a hex private key.
 func privateKeyToTronAddress(privKeyHex string) (string, error) {
+	privKeyHex = strings.TrimPrefix(privKeyHex, "0x")
 	privKeyBytes, err := hex.DecodeString(privKeyHex)
 	if err != nil {
 		return "", fmt.Errorf("tron: decoding private key: %w", err)

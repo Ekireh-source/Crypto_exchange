@@ -24,6 +24,7 @@ type User struct {
 	ReferralCode string     `db:"referral_code" json:"referral_code"`
 	ReferredBy   *uuid.UUID `db:"referred_by"   json:"referred_by,omitempty"`
 	KYCStatus    KYCStatus  `db:"kyc_status"    json:"kyc_status"`
+	Role         string     `db:"role"          json:"role"`
 	CreatedAt    time.Time  `db:"created_at"    json:"created_at"`
 }
 

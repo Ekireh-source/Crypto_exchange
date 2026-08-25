@@ -4,8 +4,10 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/crypto"
 
@@ -31,6 +33,9 @@ type accountResponse struct {
 func (c *Client) GetNativeBalance(ctx context.Context, address string) (*big.Float, error) {
 	var resp accountResponse
 	if err := c.get(ctx, "/v1/accounts/"+address, &resp); err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return big.NewFloat(0), nil // account not yet activated
+		}
 		return nil, fmt.Errorf("tron: GetNativeBalance: %w", err)
 	}
 	if len(resp.Data) == 0 {
@@ -47,6 +52,9 @@ func (c *Client) GetTokenBalance(ctx context.Context, address, contractAddress s
 
 	var resp trc20BalanceResponse
 	if err := c.get(ctx, path, &resp); err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return big.NewFloat(0), nil // account not yet activated
+		}
 		return nil, fmt.Errorf("tron: GetTokenBalance: %w", err)
 	}
 	if len(resp.Data) == 0 {
@@ -205,6 +213,7 @@ func (c *Client) signAndBroadcast(ctx context.Context, tx map[string]interface{}
 	hash := hashArr[:]
 
 	// 4. Parse private key and sign.
+	privKeyHex = strings.TrimPrefix(privKeyHex, "0x")
 	privKeyBytes, err := hex.DecodeString(privKeyHex)
 	if err != nil {
 		return "", fmt.Errorf("tron: decoding private key: %w", err)
@@ -268,3 +277,21 @@ func (c *Client) EstimateFee(ctx context.Context, assetIsToken bool) (*blockchai
 		NativeSymbol: "TRX",
 	}, nil
 }
+
+// getTxByIDResp is a partial shape of the TronGrid gettransactionbyid response.
+type getTxByIDResp struct {
+	TxID string `json:"txID"` // empty if the transaction is not found
+}
+
+// GetTxStatus checks whether a TRON transaction is confirmed on-chain.
+// It calls GET /wallet/gettransactionbyid. A non-empty txID in the response
+// means the node has a record of the transaction (i.e., it is confirmed).
+func (c *Client) GetTxStatus(ctx context.Context, txHash string) (bool, error) {
+	path := "/wallet/gettransactionbyid?value=" + txHash
+	var resp getTxByIDResp
+	if err := c.get(ctx, path, &resp); err != nil {
+		return false, fmt.Errorf("tron: GetTxStatus %s: %w", txHash, err)
+	}
+	return resp.TxID != "", nil
+}
+

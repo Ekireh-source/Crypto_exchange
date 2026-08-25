@@ -16,3 +16,17 @@ export const portfolioResponseSchema = z.object({
 });
 
 export type PortfolioResponse = z.infer<typeof portfolioResponseSchema>;
+
+export const swapRequestSchema = z.object({
+  from_asset_id: z.number(),
+  to_asset_id: z.number(),
+  amount: z.string(),
+});
+
+export type SwapRequest = z.infer<typeof swapRequestSchema>;
+
+export const swapResponseSchema = z.object({
+  swap: z.any(), // Adjust type as needed based on backend Swap model
+});
+
+export type SwapResponse = z.infer<typeof swapResponseSchema>;

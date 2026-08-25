@@ -4,8 +4,10 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
+	"exchange/internal/api/middleware"
 	"exchange/internal/services"
 )
 
@@ -18,9 +20,10 @@ func NewAuthHandler(authSvc *services.AuthService) *AuthHandler {
 }
 
 type RegisterRequest struct {
-	Email        string `json:"email" form:"email"`
-	Password     string `json:"password" form:"password"`
-	ReferralCode string `json:"referral_code" form:"referral_code"`
+	Email           string `json:"email" form:"email"`
+	Password        string `json:"password" form:"password"`
+	ConfirmPassword string `json:"confirm_password" form:"confirm_password"`
+	ReferralCode    string `json:"referral_code" form:"referral_code"`
 }
 
 func (h *AuthHandler) Register(c echo.Context) error {
@@ -33,6 +36,11 @@ func (h *AuthHandler) Register(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid email or password too short")
 	}
 
+	if req.Password != req.ConfirmPassword {
+		return echo.NewHTTPError(http.StatusBadRequest, "Passwords do not match")
+	}
+
+
 	user, err := h.authSvc.Register(c.Request().Context(), req.Email, req.Password, req.ReferralCode)
 	if err != nil {
 		if errors.Is(err, services.ErrUserExists) {
@@ -44,7 +52,7 @@ func (h *AuthHandler) Register(c echo.Context) error {
 		return err
 	}
 
-	tokens, err := h.authSvc.GenerateTokenPair(user.ID)
+	tokens, err := h.authSvc.GenerateTokenPair(user)
 	if err != nil {
 		return err
 	}
@@ -55,6 +63,7 @@ func (h *AuthHandler) Register(c echo.Context) error {
 			"id":            user.ID,
 			"email":         user.Email,
 			"referral_code": user.ReferralCode,
+			"role":          user.Role,
 		},
 		"access_token":  tokens.AccessToken,
 		"refresh_token": tokens.RefreshToken,
@@ -85,6 +94,7 @@ func (h *AuthHandler) Login(c echo.Context) error {
 			"id":            user.ID,
 			"email":         user.Email,
 			"referral_code": user.ReferralCode,
+			"role":          user.Role,
 		},
 		"access_token":  tokens.AccessToken,
 		"refresh_token": tokens.RefreshToken,
@@ -110,4 +120,42 @@ func (h *AuthHandler) Refresh(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, tokens)
+}
+
+func (h *AuthHandler) GetProfile(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+	if userID == uuid.Nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Unauthorized")
+	}
+
+	user, stats, referredUsers, err := h.authSvc.GetProfile(c.Request().Context(), userID)
+	if err != nil {
+		return err
+	}
+
+	// Format referred users
+	formattedReferred := make([]map[string]interface{}, 0, len(referredUsers))
+	for _, ru := range referredUsers {
+		formattedReferred = append(formattedReferred, map[string]interface{}{
+			"id":         ru.ID,
+			"email":      ru.Email,
+			"phone":      ru.Phone,
+			"kyc_status": ru.KYCStatus,
+			"created_at": ru.CreatedAt,
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"user": map[string]interface{}{
+			"id":            user.ID,
+			"email":         user.Email,
+			"phone":         user.Phone,
+			"kyc_status":    user.KYCStatus,
+			"role":          user.Role,
+			"created_at":    user.CreatedAt,
+			"referral_code": user.ReferralCode,
+		},
+		"referral_stats": stats,
+		"referred_users": formattedReferred,
+	})
 }

@@ -10,6 +10,7 @@ export const assetSchema = z.object({
   decimals: z.number(),
   is_active: z.boolean(),
   logo_url: z.string().optional(),
+  current_price: z.number().optional(),
 });
 
 export const assetsResponseSchema = z.array(assetSchema);

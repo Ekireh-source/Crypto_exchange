@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS watchlists (
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    asset_id INT REFERENCES assets(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, asset_id)
+);

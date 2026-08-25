@@ -6,9 +6,12 @@ import (
 
 	"github.com/labstack/echo/v4"
 
+	"context"
 	"exchange/config"
+	_ "exchange/docs" // swagger docs
 	"exchange/internal/api/handlers"
 	"exchange/internal/api/middleware"
+	"github.com/swaggo/echo-swagger"
 	"exchange/internal/blockchain"
 	"exchange/internal/blockchain/bsc"
 	"exchange/internal/blockchain/tron"
@@ -16,7 +19,6 @@ import (
 	"exchange/internal/db/repository"
 	"exchange/internal/models"
 	"exchange/internal/services"
-	"context"
 	"log"
 	"time"
 )
@@ -26,14 +28,23 @@ func RegisterRoutes(e *echo.Echo, cfg *config.Config, pool *db.Pool, adapters ma
 	// ── Repositories ──────────────────────────────────────────────────────────
 	userRepo := repository.NewUserRepo(pool)
 	walletRepo := repository.NewWalletRepo(pool)
+	p2pRepo := repository.NewP2PRepo(pool)
 
 	// ── Services ──────────────────────────────────────────────────────────────
 	authSvc := services.NewAuthService(cfg, userRepo)
 	priceSvc := services.NewPriceService(cfg.CoinGeckoAPIKey)
 	walletSvc := services.NewWalletService(cfg, walletRepo, priceSvc, adapters, scanners)
+	sweeperSvc := services.NewSweeperService(cfg, walletRepo, priceSvc, adapters)
+	withdrawalMonitor := services.NewWithdrawalMonitor(cfg, walletRepo, walletSvc, adapters)
+	p2pSvc := services.NewP2PService(p2pRepo)
+	adminHandler := handlers.NewAdminHandler(userRepo, walletRepo)
 
 	// ── Background Scanners ───────────────────────────────────────────────────
 	ctx := context.Background()
+
+	// 0. Start Sweeper Service and Withdrawal Monitor
+	sweeperSvc.Start(ctx)
+	withdrawalMonitor.Start(ctx)
 
 	// 1. Initialize BSC Monitor
 	if bscAdapter, ok := adapters[models.NetworkBSC].(*bsc.Client); ok {
@@ -48,7 +59,7 @@ func RegisterRoutes(e *echo.Echo, cfg *config.Config, pool *db.Pool, adapters ma
 			} else {
 				log.Printf("Successfully processed BSC deposit for tx: %s", tx.TxHash)
 			}
-		}, 3*time.Second)
+		}, 3*time.Second, cfg.BSCMinConfirmations)
 		scanners[models.NetworkBSC] = monitor
 		go monitor.Start(ctx)
 	} else {
@@ -68,7 +79,7 @@ func RegisterRoutes(e *echo.Echo, cfg *config.Config, pool *db.Pool, adapters ma
 			} else {
 				log.Printf("Successfully processed TRON deposit for tx: %s", tx.TxHash)
 			}
-		}, 3*time.Second)
+		}, 3*time.Second, cfg.TronMinConfirmations)
 		scanners[models.NetworkTRON] = monitor
 		go monitor.Start(ctx)
 	} else {
@@ -101,6 +112,14 @@ func RegisterRoutes(e *echo.Echo, cfg *config.Config, pool *db.Pool, adapters ma
 	// ── Handlers ──────────────────────────────────────────────────────────────
 	authHandler := handlers.NewAuthHandler(authSvc)
 	walletHandler := handlers.NewWalletHandler(walletSvc)
+	p2pHandler := handlers.NewP2PHandler(p2pSvc)
+
+	// ── Developer API Setup ───────────────────────────────────────────────────
+	apiKeyRepo := repository.NewAPIKeyRepo(pool)
+	apiKeySvc := services.NewAPIKeyService(apiKeyRepo)
+	webhookSvc := services.NewWebhookService(apiKeyRepo)
+	devHandler := handlers.NewDeveloperHandler(apiKeySvc, webhookSvc)
+	publicAPIHandler := handlers.NewPublicAPIHandler(walletSvc)
 
 	v1 := e.Group("/v1")
 
@@ -110,16 +129,71 @@ func RegisterRoutes(e *echo.Echo, cfg *config.Config, pool *db.Pool, adapters ma
 	auth.POST("/login", authHandler.Login)
 	auth.POST("/refresh", authHandler.Refresh)
 
-	// ── Protected Routes ──────────────────────────────────────────────────────
+	// ── Protected Routes (JWT — your UI) ──────────────────────────────────────
 	protected := v1.Group("")
 	protected.Use(middleware.RequireAuth(cfg.JWTSecret))
-	
+
 	wallet := protected.Group("/wallet")
 	wallet.GET("/assets", walletHandler.GetAssets)
 	wallet.GET("/portfolio", walletHandler.GetPortfolio)
 	wallet.GET("/deposit/:assetID", walletHandler.GetDepositAddress)
 	wallet.POST("/send", walletHandler.SendCrypto)
+	wallet.POST("/swap", walletHandler.HandleSwap)
 	wallet.GET("/transactions", walletHandler.GetTransactions)
+	wallet.GET("/transactions/:id", walletHandler.GetTransaction)
+	wallet.GET("/watchlist", walletHandler.GetWatchlist)
+	wallet.POST("/watchlist/toggle", walletHandler.ToggleWatchlist)
+
+	user := protected.Group("/user")
+	user.GET("/profile", authHandler.GetProfile)
+
+	p2p := protected.Group("/p2p")
+	p2p.POST("/orders", p2pHandler.CreateOrder)
+	p2p.GET("/orders", p2pHandler.ListActiveOrders)
+	p2p.POST("/orders/:id/trade", p2pHandler.CreateTrade)
+	p2p.GET("/trades", p2pHandler.ListUserTrades)
+	p2p.GET("/trades/:id", p2pHandler.GetTrade)
+	p2p.POST("/trades/:id/pay", p2pHandler.MarkTradePaid)
+	p2p.POST("/trades/:id/release", p2pHandler.ReleaseTrade)
+	p2p.POST("/trades/:id/cancel", p2pHandler.CancelTrade)
+
+	// ── Developer Portal Routes (JWT — for managing apps/keys) ────────────────
+	developer := protected.Group("/developer")
+	developer.POST("/apps", devHandler.CreateApp)
+	developer.GET("/apps", devHandler.ListApps)
+	developer.DELETE("/apps/:appID", devHandler.DeleteApp)
+	developer.PUT("/apps/:appID/status", devHandler.UpdateAppStatus)
+	developer.GET("/apps/:appID/keys", devHandler.ListKeys)
+	developer.POST("/apps/:appID/keys/regenerate", devHandler.RegenerateKeys)
+	developer.DELETE("/apps/:appID/keys/:keyID", devHandler.RevokeKey)
+	developer.GET("/apps/:appID/logs", devHandler.GetLogs)
+	developer.POST("/apps/:appID/webhooks", devHandler.CreateWebhook)
+	developer.GET("/apps/:appID/webhooks", devHandler.ListWebhooks)
+	developer.DELETE("/apps/:appID/webhooks/:webhookID", devHandler.DeleteWebhook)
+
+	// ── Admin Routes (Protected, Admin/Superadmin only) ───────────────────────
+	admin := protected.Group("/admin")
+	admin.Use(middleware.RequireRole("admin", "superadmin"))
+	admin.GET("/users", adminHandler.GetUsers)
+	admin.PUT("/users/:id/role", adminHandler.UpdateUserRole, middleware.RequireRole("superadmin"))
+	admin.GET("/transactions", adminHandler.GetTransactions)
+
+
+	// ── Swagger Documentation ─────────────────────────────────────────────────
+	e.GET("/swagger/*", echoSwagger.WrapHandler)
+
+	// ── Public Developer API (API Key auth — for third-party consumers) ───────
+	publicAPI := e.Group("/api/v1")
+	publicAPI.Use(middleware.RequireAPIKey(apiKeySvc))
+	publicAPI.Use(middleware.RateLimitByAPIKey())
+	publicAPI.Use(middleware.APIRequestLogger(apiKeySvc))
+
+	publicAPI.GET("/assets", publicAPIHandler.GetAssets)
+	publicAPI.GET("/wallet/portfolio", publicAPIHandler.GetPortfolio)
+	publicAPI.GET("/wallet/deposit/:assetID", publicAPIHandler.GetDepositAddress)
+	publicAPI.POST("/wallet/send", publicAPIHandler.SendCrypto)
+	publicAPI.POST("/wallet/swap", publicAPIHandler.SwapCrypto)
+	publicAPI.GET("/wallet/transactions", publicAPIHandler.GetTransactions)
 }
 
 // ErrorHandler formats HTTP errors as JSON instead of plaintext.

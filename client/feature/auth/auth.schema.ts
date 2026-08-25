@@ -26,9 +26,15 @@ export const registerSchema = z.object({
     .min(8, 'Password must be at least 8 characters')
     .regex(/[A-Z]/, 'Must contain at least one uppercase letter')
     .regex(/[0-9]/, 'Must contain at least one number'),
+  confirm_password: z
+    .string()
+    .min(1, 'Please confirm your password'),
   referral_code: z
     .string()
     .optional(),
+}).refine((data) => data.password === data.confirm_password, {
+  message: "Passwords do not match",
+  path: ['confirm_password'],
 });
 
 export type RegisterDto = z.infer<typeof registerSchema>;
@@ -38,6 +44,7 @@ export const authUserSchema = z.object({
   id: z.string(),
   email: z.string().email(),
   referral_code: z.string(),
+  role: z.string(),
 });
 
 export const authResponseSchema = z.object({

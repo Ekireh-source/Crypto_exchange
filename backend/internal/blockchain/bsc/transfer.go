@@ -80,6 +80,7 @@ func (c *Client) GetTokenBalance(ctx context.Context, address, contractAddress s
 // SendNative signs and broadcasts a BNB transfer.
 // amount is in BNB (human-readable), not wei.
 func (c *Client) SendNative(ctx context.Context, fromPrivKeyHex, toAddress string, amount *big.Float) (string, error) {
+	fromPrivKeyHex = strings.TrimPrefix(fromPrivKeyHex, "0x")
 	privKey, err := crypto.HexToECDSA(fromPrivKeyHex)
 	if err != nil {
 		return "", fmt.Errorf("bsc: parsing private key: %w", err)
@@ -116,6 +117,7 @@ func (c *Client) SendNative(ctx context.Context, fromPrivKeyHex, toAddress strin
 // SendToken signs and broadcasts a BEP-20 transfer call.
 // amount is in token units (human-readable), not wei.
 func (c *Client) SendToken(ctx context.Context, fromPrivKeyHex, toAddress, contractAddress string, amount *big.Float, decimals int) (string, error) {
+	fromPrivKeyHex = strings.TrimPrefix(fromPrivKeyHex, "0x")
 	privKey, err := crypto.HexToECDSA(fromPrivKeyHex)
 	if err != nil {
 		return "", fmt.Errorf("bsc: parsing private key: %w", err)
@@ -192,3 +194,97 @@ func (c *Client) GetIncomingTransactions(ctx context.Context, address string, fr
 	// This stub satisfies the interface for compilation.
 	return nil, nil
 }
+
+// GetTxStatus checks whether a BSC transaction has been mined and confirmed.
+// It calls eth_getTransactionReceipt — a non-nil receipt means the tx landed
+// in a block. A receipt with Status == 0 means the tx was reverted on-chain,
+// which we still treat as "confirmed" from a double-spend perspective.
+func (c *Client) GetTxStatus(ctx context.Context, txHash string) (bool, error) {
+	hash := common.HexToHash(txHash)
+	receipt, err := c.rpc.TransactionReceipt(ctx, hash)
+	if err != nil {
+		// go-ethereum returns ethereum.NotFound when the tx is not yet mined.
+		if err.Error() == "not found" {
+			return false, nil
+		}
+		return false, fmt.Errorf("bsc: GetTxStatus %s: %w", txHash, err)
+	}
+	return receipt != nil, nil
+}
+
+// SendWithBumpedGas re-broadcasts a transaction from the Hot Wallet with a
+// gas price bumped by bumpPercent. It reuses the current pending nonce so the
+// new tx replaces the stuck one in the BSC/EVM mempool (same-nonce replacement).
+//
+// This is used by the WithdrawalMonitor (Phase 5.3) to unstick withdrawals.
+func (c *Client) SendWithBumpedGas(
+	ctx context.Context,
+	fromPrivKeyHex string,
+	toAddress string,
+	amount *big.Float,
+	contractAddress *string,
+	decimals int,
+	bumpPercent int,
+	isToken bool,
+) (string, error) {
+	fromPrivKeyHex = strings.TrimPrefix(fromPrivKeyHex, "0x")
+	privKey, err := crypto.HexToECDSA(fromPrivKeyHex)
+	if err != nil {
+		return "", fmt.Errorf("bsc: parsing private key: %w", err)
+	}
+
+	fromAddr := crypto.PubkeyToAddress(privKey.PublicKey)
+	toAddr := common.HexToAddress(toAddress)
+
+	// Fetch current nonce (pending) so we reuse the same slot as the stuck tx.
+	nonce, err := c.rpc.PendingNonceAt(ctx, fromAddr)
+	if err != nil {
+		return "", fmt.Errorf("bsc: fetching nonce: %w", err)
+	}
+
+	// Get suggested gas price and bump it.
+	baseGasPrice, err := c.rpc.SuggestGasPrice(ctx)
+	if err != nil {
+		return "", fmt.Errorf("bsc: suggesting gas price: %w", err)
+	}
+	bumpMultiplier := big.NewInt(int64(100 + bumpPercent))
+	bumpedGasPrice := new(big.Int).Div(new(big.Int).Mul(baseGasPrice, bumpMultiplier), big.NewInt(100))
+
+	var signed *types.Transaction
+
+	if !isToken {
+		amountWei := bscCrypto.ToBaseUnits(amount, 18)
+		tx := types.NewTransaction(nonce, toAddr, amountWei, 21000, bumpedGasPrice, nil)
+		signed, err = types.SignTx(tx, types.LatestSignerForChainID(c.chainID), privKey)
+		if err != nil {
+			return "", fmt.Errorf("bsc: signing bumped native tx: %w", err)
+		}
+	} else {
+		contractAddr := common.HexToAddress(*contractAddress)
+		amountBase := bscCrypto.ToBaseUnits(amount, decimals)
+		callData, packErr := erc20TransferABI.Pack("transfer", toAddr, amountBase)
+		if packErr != nil {
+			return "", fmt.Errorf("bsc: packing transfer: %w", packErr)
+		}
+		estimatedGas, estErr := c.rpc.EstimateGas(ctx, ethereum.CallMsg{
+			From: fromAddr,
+			To:   &contractAddr,
+			Data: callData,
+		})
+		if estErr != nil {
+			estimatedGas = 100_000
+		}
+		tx := types.NewTransaction(nonce, contractAddr, big.NewInt(0), estimatedGas, bumpedGasPrice, callData)
+		signed, err = types.SignTx(tx, types.LatestSignerForChainID(c.chainID), privKey)
+		if err != nil {
+			return "", fmt.Errorf("bsc: signing bumped token tx: %w", err)
+		}
+	}
+
+	if err = c.rpc.SendTransaction(ctx, signed); err != nil {
+		return "", fmt.Errorf("bsc: broadcasting bumped tx: %w", err)
+	}
+
+	return signed.Hash().Hex(), nil
+}
+

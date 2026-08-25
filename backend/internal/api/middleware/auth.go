@@ -52,8 +52,13 @@ func RequireAuth(jwtSecret string) echo.MiddlewareFunc {
 				return echo.NewHTTPError(http.StatusUnauthorized, "Invalid user ID in token")
 			}
 
-			// Inject User ID into context
+			// Inject User ID and Role into context
 			c.Set("userID", userID)
+			if role, ok := claims["role"].(string); ok {
+				c.Set("userRole", role)
+			} else {
+				c.Set("userRole", "user") // default
+			}
 
 			return next(c)
 		}
@@ -64,4 +69,29 @@ func RequireAuth(jwtSecret string) echo.MiddlewareFunc {
 func GetUserID(c echo.Context) uuid.UUID {
 	id, _ := c.Get("userID").(uuid.UUID)
 	return id
+}
+
+// GetUserRole extracts the user role from the echo.Context.
+func GetUserRole(c echo.Context) string {
+	role, ok := c.Get("userRole").(string)
+	if !ok {
+		return "user"
+	}
+	return role
+}
+
+// RequireRole is a middleware that restricts access to users with one of the specified roles.
+// It assumes RequireAuth has already run.
+func RequireRole(roles ...string) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			userRole := GetUserRole(c)
+			for _, allowedRole := range roles {
+				if userRole == allowedRole {
+					return next(c)
+				}
+			}
+			return echo.NewHTTPError(http.StatusForbidden, "Insufficient permissions")
+		}
+	}
 }

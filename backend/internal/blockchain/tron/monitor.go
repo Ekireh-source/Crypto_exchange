@@ -62,6 +62,12 @@ type TronMonitor struct {
 	onDeposit    OnTronDepositFunc
 	pollInterval time.Duration
 
+	// minConfirmationSecs is the minimum age (in seconds) a transaction must
+	// have before we report it as a deposit. Since TronGrid does not expose
+	// block numbers in the tx-list endpoints we use elapsed wall-clock time as
+	// a proxy: TRON produces one block every ~3 s, so 20 confirmations ≈ 60 s.
+	minConfirmationSecs int64
+
 	// seenTxIDs prevents processing the same transaction more than once.
 	// TronGrid returns all recent transactions on every poll (no block cursor).
 	seenMu  sync.Mutex
@@ -72,19 +78,26 @@ type TronMonitor struct {
 type OnTronDepositFunc func(tx blockchain.IncomingTx)
 
 // NewTronMonitor creates a TRON deposit monitor.
+// minConfirmations is the number of block confirmations required. Each TRON
+// block is ~3 s, so the minimum age enforced is minConfirmations * 3 seconds.
 func NewTronMonitor(
 	client *Client,
 	contracts []string,
 	onDeposit OnTronDepositFunc,
 	pollInterval time.Duration,
+	minConfirmations int64,
 ) *TronMonitor {
+	if minConfirmations <= 0 {
+		minConfirmations = 20 // safe default for TRON
+	}
 	return &TronMonitor{
-		client:       client,
-		addresses:    make(map[string]bool),
-		contracts:    contracts,
-		onDeposit:    onDeposit,
-		pollInterval: pollInterval,
-		seenIDs:      make(map[string]bool),
+		client:              client,
+		addresses:           make(map[string]bool),
+		contracts:           contracts,
+		onDeposit:           onDeposit,
+		pollInterval:        pollInterval,
+		minConfirmationSecs: minConfirmations * 3, // ~3 s per TRON block
+		seenIDs:             make(map[string]bool),
 	}
 }
 
@@ -165,6 +178,20 @@ func (m *TronMonitor) poll(ctx context.Context) {
 					continue // already processed
 				}
 
+				// Confirmation gate: only fire if the transaction is old enough.
+				// This guards against reporting a deposit that is later erased by
+				// a TRON node reorg or a TronGrid eventual-consistency delay.
+				txAge := time.Since(time.UnixMilli(tx.BlockTimestamp)).Seconds()
+				if int64(txAge) < m.minConfirmationSecs {
+					log.Printf("tron monitor: TRC-20 tx %s is too recent (%.0fs < %ds required), deferring",
+						tx.TransactionID, txAge, m.minConfirmationSecs)
+					// Un-mark as seen so we re-evaluate it on the next poll.
+					m.seenMu.Lock()
+					delete(m.seenIDs, tx.TransactionID)
+					m.seenMu.Unlock()
+					continue
+				}
+
 				amount := new(big.Int)
 				amount.SetString(tx.Value, 10)
 
@@ -211,6 +238,17 @@ func (m *TronMonitor) poll(ctx context.Context) {
 			// TronGrid returns to_address in hex — convert to Base58 for comparison.
 			toBase58, err := hexToTronAddress(toHex)
 			if err != nil || toBase58 != addr {
+				continue
+			}
+
+			// Confirmation gate: same time-based proxy as for TRC-20.
+			txAge := time.Since(time.UnixMilli(tx.BlockTimestamp)).Seconds()
+			if int64(txAge) < m.minConfirmationSecs {
+				log.Printf("tron monitor: native tx %s is too recent (%.0fs < %ds required), deferring",
+					tx.TxID, txAge, m.minConfirmationSecs)
+				m.seenMu.Lock()
+				delete(m.seenIDs, tx.TxID)
+				m.seenMu.Unlock()
 				continue
 			}
 

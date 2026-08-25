@@ -17,11 +17,16 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"time"
 )
+
+// ErrNotFound is returned when the TronGrid API returns a 404 Not Found,
+// indicating the account is not activated.
+var ErrNotFound = errors.New("tron: account not found")
 
 // Client talks to TronGrid's REST API.
 type Client struct {
@@ -69,6 +74,9 @@ func (c *Client) get(ctx context.Context, path string, out interface{}) error {
 	defer resp.Body.Close()
 
 	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode == http.StatusNotFound {
+		return ErrNotFound
+	}
 	if resp.StatusCode >= 400 {
 		return fmt.Errorf("tron GET %s: status %d: %s", path, resp.StatusCode, body)
 	}

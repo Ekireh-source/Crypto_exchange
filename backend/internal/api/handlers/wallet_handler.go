@@ -4,9 +4,11 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
 	"exchange/internal/api/middleware"
+	"exchange/internal/models"
 	"exchange/internal/services"
 )
 
@@ -106,4 +108,85 @@ func (h *WalletHandler) GetTransactions(c echo.Context) error {
 	})
 }
 
+// GetTransaction fetches a single transaction by ID.
+func (h *WalletHandler) GetTransaction(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+	txIDStr := c.Param("id")
+	txID, err := uuid.Parse(txIDStr)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid transaction id")
+	}
 
+	tx, err := h.walletSvc.GetTransactionByID(c.Request().Context(), txID, userID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+	if tx == nil {
+		return echo.NewHTTPError(http.StatusNotFound, "transaction not found")
+	}
+
+	// If it's a swap, we could also attach the swap details, or just return the tx.
+	return c.JSON(http.StatusOK, tx)
+}
+
+// HandleSwap processes an internal asset swap.
+// @Summary Swap assets
+// @Description Swap one asset for another internally
+// @Tags wallet
+// @Accept json
+// @Produce json
+// @Param request body models.SwapRequest true "Swap Request"
+// @Success 201 {object} models.SwapResponse
+// @Router /v1/wallet/swap [post]
+// @Security BearerAuth
+func (h *WalletHandler) HandleSwap(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+	if userID == uuid.Nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "unauthorized")
+	}
+
+	var req models.SwapRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	swap, err := h.walletSvc.SwapCrypto(c.Request().Context(), userID, req)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	return c.JSON(http.StatusCreated, models.SwapResponse{Swap: *swap})
+}
+
+func (h *WalletHandler) GetWatchlist(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+	
+	watchlist, err := h.walletSvc.GetWatchlist(c.Request().Context(), userID)
+	if err != nil {
+		return err
+	}
+	
+	// Handle nil watchlist as empty array
+	if watchlist == nil {
+		watchlist = []int{}
+	}
+
+	return c.JSON(http.StatusOK, watchlist)
+}
+
+func (h *WalletHandler) ToggleWatchlist(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+	
+	var req struct {
+		AssetID int `json:"asset_id"`
+	}
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
+	}
+
+	if err := h.walletSvc.ToggleWatchlist(c.Request().Context(), userID, req.AssetID); err != nil {
+		return err
+	}
+
+	return c.NoContent(http.StatusOK)
+}
