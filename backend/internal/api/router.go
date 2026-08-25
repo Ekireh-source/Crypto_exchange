@@ -37,6 +37,7 @@ func RegisterRoutes(e *echo.Echo, cfg *config.Config, pool *db.Pool, adapters ma
 	sweeperSvc := services.NewSweeperService(cfg, walletRepo, priceSvc, adapters)
 	withdrawalMonitor := services.NewWithdrawalMonitor(cfg, walletRepo, walletSvc, adapters)
 	p2pSvc := services.NewP2PService(p2pRepo)
+	adminHandler := handlers.NewAdminHandler(userRepo, walletRepo)
 
 	// ── Background Scanners ───────────────────────────────────────────────────
 	ctx := context.Background()
@@ -169,6 +170,14 @@ func RegisterRoutes(e *echo.Echo, cfg *config.Config, pool *db.Pool, adapters ma
 	developer.POST("/apps/:appID/webhooks", devHandler.CreateWebhook)
 	developer.GET("/apps/:appID/webhooks", devHandler.ListWebhooks)
 	developer.DELETE("/apps/:appID/webhooks/:webhookID", devHandler.DeleteWebhook)
+
+	// ── Admin Routes (Protected, Admin/Superadmin only) ───────────────────────
+	admin := protected.Group("/admin")
+	admin.Use(middleware.RequireRole("admin", "superadmin"))
+	admin.GET("/users", adminHandler.GetUsers)
+	admin.PUT("/users/:id/role", adminHandler.UpdateUserRole, middleware.RequireRole("superadmin"))
+	admin.GET("/transactions", adminHandler.GetTransactions)
+
 
 	// ── Swagger Documentation ─────────────────────────────────────────────────
 	e.GET("/swagger/*", echoSwagger.WrapHandler)

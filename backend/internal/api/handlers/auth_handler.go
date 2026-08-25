@@ -52,7 +52,7 @@ func (h *AuthHandler) Register(c echo.Context) error {
 		return err
 	}
 
-	tokens, err := h.authSvc.GenerateTokenPair(user.ID)
+	tokens, err := h.authSvc.GenerateTokenPair(user)
 	if err != nil {
 		return err
 	}
@@ -63,6 +63,7 @@ func (h *AuthHandler) Register(c echo.Context) error {
 			"id":            user.ID,
 			"email":         user.Email,
 			"referral_code": user.ReferralCode,
+			"role":          user.Role,
 		},
 		"access_token":  tokens.AccessToken,
 		"refresh_token": tokens.RefreshToken,
@@ -93,6 +94,7 @@ func (h *AuthHandler) Login(c echo.Context) error {
 			"id":            user.ID,
 			"email":         user.Email,
 			"referral_code": user.ReferralCode,
+			"role":          user.Role,
 		},
 		"access_token":  tokens.AccessToken,
 		"refresh_token": tokens.RefreshToken,
@@ -149,6 +151,7 @@ func (h *AuthHandler) GetProfile(c echo.Context) error {
 			"email":         user.Email,
 			"phone":         user.Phone,
 			"kyc_status":    user.KYCStatus,
+			"role":          user.Role,
 			"created_at":    user.CreatedAt,
 			"referral_code": user.ReferralCode,
 		},

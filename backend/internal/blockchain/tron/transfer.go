@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -32,6 +33,9 @@ type accountResponse struct {
 func (c *Client) GetNativeBalance(ctx context.Context, address string) (*big.Float, error) {
 	var resp accountResponse
 	if err := c.get(ctx, "/v1/accounts/"+address, &resp); err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return big.NewFloat(0), nil // account not yet activated
+		}
 		return nil, fmt.Errorf("tron: GetNativeBalance: %w", err)
 	}
 	if len(resp.Data) == 0 {
@@ -48,6 +52,9 @@ func (c *Client) GetTokenBalance(ctx context.Context, address, contractAddress s
 
 	var resp trc20BalanceResponse
 	if err := c.get(ctx, path, &resp); err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return big.NewFloat(0), nil // account not yet activated
+		}
 		return nil, fmt.Errorf("tron: GetTokenBalance: %w", err)
 	}
 	if len(resp.Data) == 0 {

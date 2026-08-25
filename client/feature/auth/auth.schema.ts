@@ -44,6 +44,7 @@ export const authUserSchema = z.object({
   id: z.string(),
   email: z.string().email(),
   referral_code: z.string(),
+  role: z.string(),
 });
 
 export const authResponseSchema = z.object({

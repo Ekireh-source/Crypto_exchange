@@ -21,6 +21,7 @@ interface IUser {
   firstname?: string;
   lastname?: string;
   email?: string;
+  role?: string;
 }
 
 export default function FloatingNavbar() {
@@ -178,6 +179,16 @@ export default function FloatingNavbar() {
                 <span>Developer Portal</span>
               </DropdownMenuItem>
 
+              {(currentUser?.role === 'admin' || currentUser?.role === 'superadmin') && (
+                <DropdownMenuItem
+                  onClick={() => router.push("/admin")}
+                  className="rounded-lg h-11 gap-3 font-medium text-blue-400 hover:bg-blue-500/10 focus:bg-blue-500/10 cursor-pointer px-3 mt-1"
+                >
+                  <Icon icon="hugeicons:dashboard-square-01" className="size-5" />
+                  <span>Admin Panel</span>
+                </DropdownMenuItem>
+              )}
+
               <DropdownMenuSeparator className="bg-[#22252e] mx-1" />
 
               <DropdownMenuItem
@@ -234,6 +245,20 @@ export default function FloatingNavbar() {
               <Icon icon="hugeicons:user" className="size-5" />
               Profile
             </div>
+            
+            {(currentUser?.role === 'admin' || currentUser?.role === 'superadmin') && (
+              <div
+                onClick={() => {
+                  setMenuOpen(false);
+                  router.push("/admin");
+                }}
+                className="cursor-pointer rounded-xl px-4 py-3 text-[15px] font-semibold text-blue-400 hover:bg-blue-500/10 transition-colors flex items-center gap-3"
+              >
+                <Icon icon="hugeicons:dashboard-square-01" className="size-5" />
+                Admin Panel
+              </div>
+            )}
+
             <div
               onClick={() => {
                 setMenuOpen(false);

@@ -105,7 +105,7 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*model
 		return nil, nil, ErrInvalidCredentials
 	}
 
-	tokens, err := s.GenerateTokenPair(user.ID)
+	tokens, err := s.GenerateTokenPair(user)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -141,12 +141,21 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*T
 		return nil, ErrInvalidToken
 	}
 
-	return s.GenerateTokenPair(userID)
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("fetching user for refresh: %w", err)
+	}
+	if user == nil {
+		return nil, ErrInvalidToken
+	}
+
+	return s.GenerateTokenPair(user)
 }
 
-func (s *AuthService) GenerateTokenPair(userID uuid.UUID) (*TokenPair, error) {
+func (s *AuthService) GenerateTokenPair(user *models.User) (*TokenPair, error) {
 	accessClaims := jwt.MapClaims{
-		"sub":  userID.String(),
+		"sub":  user.ID.String(),
+		"role": user.Role,
 		"type": "access",
 		"exp":  time.Now().Add(s.cfg.JWTAccessExpiry).Unix(),
 		"iat":  time.Now().Unix(),
@@ -158,7 +167,7 @@ func (s *AuthService) GenerateTokenPair(userID uuid.UUID) (*TokenPair, error) {
 	}
 
 	refreshClaims := jwt.MapClaims{
-		"sub":  userID.String(),
+		"sub":  user.ID.String(),
 		"type": "refresh",
 		"exp":  time.Now().Add(s.cfg.JWTRefreshExpiry).Unix(),
 		"iat":  time.Now().Unix(),

@@ -37,7 +37,11 @@ export default function LoginPage() {
           refreshToken: res.refresh_token,
         })
       );
-      router.push('/dashboard');
+      if (res.user.role === 'admin' || res.user.role === 'superadmin') {
+        router.push('/admin');
+      } else {
+        router.push('/dashboard');
+      }
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??

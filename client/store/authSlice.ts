@@ -4,6 +4,7 @@ import type { RootState } from './index';
 interface User {
   id: string;
   email: string;
+  role: string;
   referral_code: string;
 }
 

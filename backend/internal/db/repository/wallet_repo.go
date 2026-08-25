@@ -580,3 +580,44 @@ func (r *WalletRepo) ToggleWatchlist(ctx context.Context, userID uuid.UUID, asse
 
 	return tx.Commit(ctx)
 }
+
+// GetAllTransactions fetches paginated transactions for all users (for admin panel).
+func (r *WalletRepo) GetAllTransactions(ctx context.Context, limit, offset int) ([]models.Transaction, int, error) {
+	countQuery := `SELECT COUNT(*) FROM transactions`
+	
+	var total int
+	if err := r.pool.QueryRow(ctx, countQuery).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("counting transactions: %w", err)
+	}
+
+	query := `
+		SELECT id, user_id, asset_id, type, status, amount, fee, tx_hash, from_address, to_address, note, sweep_status, created_at, confirmed_at
+		FROM transactions
+		ORDER BY created_at DESC
+		LIMIT $1 OFFSET $2
+	`
+	
+	rows, err := r.pool.Query(ctx, query, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("querying all transactions: %w", err)
+	}
+	defer rows.Close()
+
+	var txs []models.Transaction
+	for rows.Next() {
+		var tx models.Transaction
+		if err := rows.Scan(
+			&tx.ID, &tx.UserID, &tx.AssetID, &tx.Type, &tx.Status, &tx.Amount, &tx.Fee,
+			&tx.TxHash, &tx.FromAddress, &tx.ToAddress, &tx.Note, &tx.SweepStatus,
+			&tx.CreatedAt, &tx.ConfirmedAt,
+		); err != nil {
+			return nil, 0, fmt.Errorf("scanning transaction: %w", err)
+		}
+		txs = append(txs, tx)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+
+	return txs, total, nil
+}
