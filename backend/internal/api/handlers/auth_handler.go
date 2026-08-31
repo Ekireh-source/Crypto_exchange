@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -17,6 +18,30 @@ type AuthHandler struct {
 
 func NewAuthHandler(authSvc *services.AuthService) *AuthHandler {
 	return &AuthHandler{authSvc: authSvc}
+}
+
+func setTokenCookies(c echo.Context, tokens *services.TokenPair) {
+	secure := c.Scheme() == "https"
+	
+	c.SetCookie(&http.Cookie{
+		Name:     "access_token",
+		Value:    tokens.AccessToken,
+		Path:     "/",
+		Expires:  time.Now().Add(15 * time.Minute),
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: http.SameSiteLaxMode,
+	})
+	
+	c.SetCookie(&http.Cookie{
+		Name:     "refresh_token",
+		Value:    tokens.RefreshToken,
+		Path:     "/",
+		Expires:  time.Now().Add(168 * time.Hour),
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: http.SameSiteLaxMode,
+	})
 }
 
 type RegisterRequest struct {
@@ -57,6 +82,8 @@ func (h *AuthHandler) Register(c echo.Context) error {
 		return err
 	}
 
+	setTokenCookies(c, tokens)
+
 	// Omit password hash in response
 	return c.JSON(http.StatusCreated, map[string]interface{}{
 		"user": map[string]interface{}{
@@ -89,6 +116,8 @@ func (h *AuthHandler) Login(c echo.Context) error {
 		return err
 	}
 
+	setTokenCookies(c, tokens)
+
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"user": map[string]interface{}{
 			"id":            user.ID,
@@ -111,6 +140,12 @@ func (h *AuthHandler) Refresh(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
 	}
 
+	if req.RefreshToken == "" {
+		if cookie, err := c.Cookie("refresh_token"); err == nil {
+			req.RefreshToken = cookie.Value
+		}
+	}
+
 	tokens, err := h.authSvc.RefreshToken(c.Request().Context(), req.RefreshToken)
 	if err != nil {
 		if errors.Is(err, services.ErrInvalidToken) {
@@ -119,7 +154,35 @@ func (h *AuthHandler) Refresh(c echo.Context) error {
 		return err
 	}
 
+	setTokenCookies(c, tokens)
+
 	return c.JSON(http.StatusOK, tokens)
+}
+
+func (h *AuthHandler) Logout(c echo.Context) error {
+	secure := c.Scheme() == "https"
+	
+	c.SetCookie(&http.Cookie{
+		Name:     "access_token",
+		Value:    "",
+		Path:     "/",
+		Expires:  time.Unix(0, 0),
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: http.SameSiteLaxMode,
+	})
+	
+	c.SetCookie(&http.Cookie{
+		Name:     "refresh_token",
+		Value:    "",
+		Path:     "/",
+		Expires:  time.Unix(0, 0),
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: http.SameSiteLaxMode,
+	})
+	
+	return c.JSON(http.StatusOK, map[string]string{"message": "Logged out successfully"})
 }
 
 func (h *AuthHandler) GetProfile(c echo.Context) error {

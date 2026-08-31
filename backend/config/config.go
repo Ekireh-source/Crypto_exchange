@@ -63,6 +63,13 @@ type Config struct {
 	WithdrawalFeeUSD     float64
 	BSCMinConfirmations  int64
 	TronMinConfirmations int64
+
+	// Email / SMTP
+	SMTPHost     string
+	SMTPPort     int
+	SMTPUsername string
+	SMTPPassword string
+	SMTPFrom     string
 }
 
 // Load reads .env (if present) then environment variables and returns a Config.
@@ -154,6 +161,13 @@ func Load() (*Config, error) {
 
 	cfg.BSCMinConfirmations = int64(mustGetEnvInt("BSC_MIN_CONFIRMATIONS", 15))
 	cfg.TronMinConfirmations = int64(mustGetEnvInt("TRON_MIN_CONFIRMATIONS", 20))
+
+	// ── Email / SMTP ──────────────────────────────────────────────────────────
+	cfg.SMTPHost = getEnvOrDefault("SMTP_HOST", "smtp.gmail.com")
+	cfg.SMTPPort = mustGetEnvInt("SMTP_PORT", 587)
+	cfg.SMTPUsername = getEnvOrDefault("SMTP_USERNAME", "")
+	cfg.SMTPPassword = getEnvOrDefault("SMTP_PASSWORD", "")
+	cfg.SMTPFrom = getEnvOrDefault("SMTP_FROM", "noreply@cryptoexchange.com")
 
 	return cfg, nil
 }

@@ -60,18 +60,25 @@ export default function P2PMarketplace() {
       toast.success("Trade initiated successfully!");
       router.push(`/p2p/trade/${trade.id}`);
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to create trade");
+      console.error("Trade creation error:", error);
+      const msg = 
+        error.response?.data?.message || 
+        error.response?.data?.error || 
+        (typeof error.response?.data === 'string' ? error.response.data : null) || 
+        error.message || 
+        "Failed to create trade";
+      toast.error(msg);
     } finally {
       setProcessing(false);
     }
   };
 
   return (
-    <div className="flex flex-col flex-1 h-full max-w-[1440px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 gap-8 overflow-y-auto">
+    <div className="flex flex-col w-full animate-in fade-in duration-500 pb-20 gap-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#13151a] p-6 rounded-2xl border border-[#22252e]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#13151a] p-6 rounded-[8px]">
         <div className="flex items-center gap-4">
-          <div className="size-12 rounded-xl bg-blue-600/20 flex items-center justify-center border border-blue-500/30">
+          <div className="size-12 rounded-xl bg-[#1c1f26] flex items-center justify-center border border-blue-500/30">
             <Icon icon="hugeicons:trade-up" className="size-6 text-blue-500" />
           </div>
           <div>
@@ -79,16 +86,16 @@ export default function P2PMarketplace() {
             <p className="text-sm text-[#888c99]">Trade crypto directly with other users</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
           <button
             onClick={() => router.push("/p2p/trades")}
-            className="px-4 py-2 bg-[#1c1f26] hover:bg-[#22252e] text-white text-sm font-semibold rounded-xl border border-[#22252e] transition-colors"
+            className="w-full sm:w-auto px-4 py-3 sm:py-2 bg-[#1c1f26] hover:bg-[#22252e] text-white text-sm font-semibold rounded-[8px] border border-[#22252e] transition-colors"
           >
             My Trades
           </button>
           <button
             onClick={() => router.push("/p2p/create")}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl transition-colors shadow-lg shadow-blue-600/20"
+            className="w-full sm:w-auto px-4 py-3 sm:py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-[8px] transition-colors shadow-lg shadow-blue-600/20"
           >
             Create Ad
           </button>
@@ -96,7 +103,7 @@ export default function P2PMarketplace() {
       </div>
 
       {/* Orders List */}
-      <div className="bg-[#13151a] rounded-2xl border border-[#22252e] overflow-hidden flex flex-col flex-1">
+      <div className="bg-[#13151a] rounded-[8px] flex flex-col">
         <div className="p-6 border-b border-[#22252e]">
           <h2 className="text-lg font-bold text-white">Active Sell Orders</h2>
         </div>
@@ -113,71 +120,86 @@ export default function P2PMarketplace() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-[#1c1f26] border-b border-[#22252e]">
-                  <th className="py-4 px-6 text-xs font-semibold text-[#888c99] uppercase tracking-wider">Asset</th>
-                  <th className="py-4 px-6 text-xs font-semibold text-[#888c99] uppercase tracking-wider">Price / Rate</th>
-                  <th className="py-4 px-6 text-xs font-semibold text-[#888c99] uppercase tracking-wider">Limits / Available</th>
-                  <th className="py-4 px-6 text-xs font-semibold text-[#888c99] uppercase tracking-wider">Payment</th>
-                  <th className="py-4 px-6 text-right"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#22252e]">
-                {orders.map((order) => {
-                  const asset = getAssetDetails(order.asset_id);
-                  return (
-                    <tr key={order.id} className="hover:bg-[#1c1f26]/60 transition-colors">
-                      <td className="py-4 px-6">
-                        <div className="flex items-center gap-3">
-                          <div className="relative size-8 rounded-full overflow-hidden bg-[#22252e] flex flex-shrink-0 items-center justify-center">
-                            {asset?.logo_url ? (
-                              <Image src={asset.logo_url} alt={asset.symbol} fill className="object-cover" />
-                            ) : (
-                              <span className="text-xs font-bold text-white">{asset?.symbol?.[0] || "?"}</span>
-                            )}
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-white">{asset?.symbol || "Unknown"}</p>
-                            <p className="text-xs text-[#888c99]">{asset?.name || "---"}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <p className="text-lg font-bold text-white">{parseFloat(order.rate).toLocaleString(undefined, { minimumFractionDigits: 2 })} <span className="text-sm font-medium text-[#888c99]">{order.fiat_currency}</span></p>
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="flex flex-col gap-1 text-sm">
-                          <div className="flex justify-between gap-4">
-                            <span className="text-[#888c99]">Available:</span>
-                            <span className="text-white font-medium">{parseFloat(order.available_amount)} {asset?.symbol}</span>
-                          </div>
-                          <div className="flex justify-between gap-4">
-                            <span className="text-[#888c99]">Limits:</span>
-                            <span className="text-white">{parseFloat(order.min_amount)} - {parseFloat(order.max_amount)} {asset?.symbol}</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 text-xs font-bold border border-emerald-500/20">
-                          <Icon icon="hugeicons:bank" className="size-3.5" />
-                          {order.payment_method}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6 text-right">
-                        <button
-                          onClick={() => { setSelectedOrder(order); setBuyAmount(""); }}
-                          className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl transition-colors shadow-lg shadow-blue-600/20"
-                        >
-                          Buy {asset?.symbol}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="flex flex-col w-full">
+            {/* Table Header */}
+            <div className="flex md:grid md:grid-cols-12 justify-between gap-4 p-6 border-b border-[#22252e] text-[13px] font-semibold text-[#888c99] uppercase tracking-wider bg-[#1c1f26]/30">
+              <div className="col-span-3">Asset</div>
+              <div className="col-span-3">Price / Rate</div>
+              <div className="col-span-3 hidden md:block">Limits / Available</div>
+              <div className="col-span-2 hidden md:block">Payment</div>
+              <div className="col-span-1 hidden md:block"></div>
+            </div>
+
+            {/* Table Body */}
+            <div className="flex flex-col divide-y divide-[#22252e]">
+              {orders.map((order) => {
+                const asset = getAssetDetails(order.asset_id);
+                return (
+                  <div key={order.id} className="flex flex-wrap md:flex-nowrap md:grid md:grid-cols-12 justify-between items-center gap-y-4 md:gap-4 p-6 hover:bg-[#1c1f26]/60 transition-colors">
+                    {/* Asset */}
+                    <div className="w-1/2 md:w-auto col-span-3 flex items-center gap-3">
+                      <div className="relative size-8 rounded-full overflow-hidden bg-[#22252e] flex flex-shrink-0 items-center justify-center">
+                        {asset?.logo_url ? (
+                          <Image src={asset.logo_url} alt={asset.symbol} fill className="object-cover" />
+                        ) : (
+                          <span className="text-xs font-bold text-white">{asset?.symbol?.[0] || "?"}</span>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-white">{asset?.symbol || "Unknown"}</p>
+                        <p className="text-xs text-[#888c99]">{asset?.name || "---"}</p>
+                      </div>
+                    </div>
+                    
+                    {/* Rate */}
+                    <div className="w-1/2 md:w-auto col-span-3 flex flex-col items-end md:items-start md:block">
+                      <span className="md:hidden text-[11px] text-[#888c99] mb-0.5">Rate</span>
+                      <p className="text-lg font-bold text-white">{parseFloat(order.rate).toLocaleString(undefined, { minimumFractionDigits: 2 })} <span className="text-sm font-medium text-[#888c99]">{order.fiat_currency}</span></p>
+                    </div>
+
+                    {/* Limits / Available (Hidden on Mobile) */}
+                    <div className="col-span-3 hidden md:flex flex-col gap-1 text-sm">
+                      <div className="flex justify-between gap-4">
+                        <span className="text-[#888c99]">Available:</span>
+                        <span className="text-white font-medium">{parseFloat(order.available_amount)} {asset?.symbol}</span>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-[#888c99]">Limits:</span>
+                        <span className="text-white">{parseFloat(order.min_amount)} - {parseFloat(order.max_amount)} {asset?.symbol}</span>
+                      </div>
+                    </div>
+
+                    {/* Payment (Hidden on Mobile) */}
+                    <div className="col-span-2 hidden md:block">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 text-xs font-bold border border-emerald-500/20">
+                        <Icon icon="hugeicons:bank" className="size-3.5" />
+                        {order.payment_method}
+                      </span>
+                    </div>
+
+                    {/* Action (Desktop) */}
+                    <div className="col-span-1 hidden md:flex justify-end">
+                      <button
+                        onClick={() => { setSelectedOrder(order); setBuyAmount(""); }}
+                        className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-[8px] transition-colors shadow-lg shadow-blue-600/20"
+                      >
+                        Buy {asset?.symbol}
+                      </button>
+                    </div>
+
+                    {/* Action (Mobile) */}
+                    <div className="w-full md:hidden flex mt-2 border-t border-[#22252e]/50 pt-4">
+                      <button
+                        onClick={() => { setSelectedOrder(order); setBuyAmount(""); }}
+                        className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-[8px] transition-colors shadow-lg shadow-blue-600/20"
+                      >
+                        Buy {asset?.symbol}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
@@ -185,7 +207,7 @@ export default function P2PMarketplace() {
       {/* Buy Modal */}
       {selectedOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-[#13151a] border border-[#22252e] rounded-3xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col">
+          <div className="bg-[#13151a] rounded-[6px] w-full max-w-md overflow-hidden shadow-2xl flex flex-col">
             <div className="p-6 border-b border-[#22252e] flex items-center justify-between">
               <h3 className="text-xl font-bold text-white">
                 Buy {getAssetDetails(selectedOrder.asset_id)?.symbol}
@@ -242,7 +264,7 @@ export default function P2PMarketplace() {
               <button
                 onClick={handleBuy}
                 disabled={!buyAmount || isNaN(parseFloat(buyAmount)) || processing}
-                className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-600/20 flex justify-center items-center gap-2 mt-2"
+                className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-[8px] transition-all shadow-lg shadow-blue-600/20 flex justify-center items-center gap-2 mt-2"
               >
                 {processing ? (
                   <Icon icon="svg-spinners:180-ring" className="size-5" />

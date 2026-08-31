@@ -34,8 +34,6 @@ export default function SignupPage() {
       dispatch(
         setCredentials({
           user: res.user,
-          accessToken: res.access_token,
-          refreshToken: res.refresh_token,
         })
       );
       router.push('/dashboard');

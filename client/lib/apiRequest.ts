@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { store } from '@/store';
-import { setTokens, logout } from '@/store/authSlice';
+import { logout } from '@/store/authSlice';
 
 // Create a reusable axios instance
 const apiRequest = axios.create({
@@ -8,23 +8,25 @@ const apiRequest = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true,
 });
 
-// Request interceptor to attach the access token
-apiRequest.interceptors.request.use(
-  (config) => {
-    // Get the current token from the Redux store
-    const { accessToken } = store.getState().auth;
-    
-    if (accessToken && config.headers) {
-      config.headers.Authorization = `Bearer ${accessToken}`;
+// Request interceptor to add Idempotency-Key for mutating requests
+apiRequest.interceptors.request.use((config) => {
+  const mutatingMethods = ['post', 'put', 'patch', 'delete'];
+  if (config.method && mutatingMethods.includes(config.method.toLowerCase())) {
+    if (!config.headers['Idempotency-Key']) {
+      // crypto.randomUUID() is available in secure contexts (HTTPS or localhost)
+      if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        config.headers['Idempotency-Key'] = crypto.randomUUID();
+      } else {
+        // Fallback for older environments
+        config.headers['Idempotency-Key'] = Math.random().toString(36).substring(2) + Date.now().toString(36);
+      }
     }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
   }
-);
+  return config;
+});
 
 // Response interceptor to handle token refresh on 401
 apiRequest.interceptors.response.use(
@@ -35,39 +37,31 @@ apiRequest.interceptors.response.use(
     const originalRequest = error.config;
 
     // If the error is 401 and we haven't tried refreshing yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry && originalRequest.url !== '/auth/refresh') {
       originalRequest._retry = true;
 
       try {
-        const { refreshToken } = store.getState().auth;
-
-        if (!refreshToken) {
-          throw new Error('No refresh token available');
-        }
-
-        // Call the refresh endpoint
-        const response = await axios.post(
+        // Call the refresh endpoint. 
+        // We don't need to pass the refresh_token in the body because the browser sends the HttpOnly cookie.
+        await axios.post(
           `${apiRequest.defaults.baseURL}/auth/refresh`,
-          { refresh_token: refreshToken }
+          {},
+          { withCredentials: true }
         );
 
-        const newAccessToken = response.data.access_token;
-        const newRefreshToken = response.data.refresh_token;
-
-        // Update the tokens in Redux (and localStorage via slice logic)
-        store.dispatch(
-          setTokens({
-            accessToken: newAccessToken,
-            refreshToken: newRefreshToken,
-          })
-        );
-
-        // Update the authorization header for the original request and retry
-        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        // The backend automatically sets the new HttpOnly cookies on the response.
+        // We can just retry the original request.
         return apiRequest(originalRequest);
         
       } catch (refreshError) {
-        // If refresh fails, log the user out
+        // If refresh fails, try to log the user out on the backend to clear cookies
+        try {
+          await axios.post(`${apiRequest.defaults.baseURL}/auth/logout`, {}, { withCredentials: true });
+        } catch (e) {
+          // ignore
+        }
+
+        // Log out on the frontend
         store.dispatch(logout());
         
         // Optionally redirect to login page (can also be handled in components via store listener)

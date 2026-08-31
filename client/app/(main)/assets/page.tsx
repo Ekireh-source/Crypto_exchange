@@ -6,11 +6,14 @@ import { Icon } from '@iconify/react';
 import { assetsService } from '@/feature/assets/assets.service';
 import { walletService } from '@/feature/wallet/wallet.service';
 import { type Asset } from '@/feature/assets/assets.schema';
+import { usePriceWebsocket } from '@/hooks/usePriceWebsocket';
 
 export default function AssetsPage() {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [watchlist, setWatchlist] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const livePrices = usePriceWebsocket();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -53,13 +56,13 @@ export default function AssetsPage() {
     <div className="flex flex-col w-full animate-in fade-in duration-500 pb-20">
       <div className="w-full">
         {/* Table Header */}
-        <div className="grid grid-cols-12 gap-4 pb-4 border-b border-[#22252e] text-[13px] font-semibold text-[#888c99]">
+        <div className="flex md:grid md:grid-cols-12 justify-between gap-4 pb-4 border-b border-[#22252e] text-[13px] font-semibold text-[#888c99]">
           <div className="col-span-3">Name</div>
           <div className="col-span-2">Market price</div>
-          <div className="col-span-2">Volume</div>
-          <div className="col-span-2">Market cap</div>
-          <div className="col-span-2">Change</div>
-          <div className="col-span-1"></div> {/* For Buy / Star */}
+          <div className="hidden md:block col-span-2">Volume</div>
+          <div className="hidden md:block col-span-2">Market cap</div>
+          <div className="hidden md:block col-span-2">Change</div>
+          <div className="col-span-1 hidden md:block"></div> {/* For Buy / Star */}
         </div>
 
         {/* Table Body */}
@@ -70,16 +73,18 @@ export default function AssetsPage() {
             </div>
           ) : (
             assets.map((asset) => {
+              const currentPrice = livePrices[asset.symbol] || asset.current_price;
+              
               return (
                 <div 
                   key={asset.id} 
-                  className="grid grid-cols-12 gap-4 py-4 items-center border-b border-transparent hover:bg-[#16181d] transition-colors group cursor-pointer"
+                  className="flex md:grid md:grid-cols-12 justify-between gap-4 py-4 items-center border-b border-transparent hover:bg-[#16181d] transition-colors group cursor-pointer"
                 >
                   {/* Name & Logo */}
                   <div className="col-span-3 flex items-center gap-4 px-2">
                     <div className="relative size-10 rounded-full bg-[#16181d] border border-[#22252e] overflow-hidden flex items-center justify-center shrink-0">
                       {asset.logo_url ? (
-                        <Image src={asset.logo_url} alt={asset.name} fill className="object-cover" />
+                         <Image src={asset.logo_url} alt={asset.name} fill className="object-cover" />
                       ) : (
                         <div className="text-[13px] font-bold text-white uppercase">{asset.symbol[0]}</div>
                       )}
@@ -92,30 +97,31 @@ export default function AssetsPage() {
 
                   {/* Market Price */}
                   <div className="col-span-2 flex items-center">
-                    <span className="text-[15px] font-medium text-white">
-                      {asset.current_price ? `$${asset.current_price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })}` : '—'}
+                    <span key={currentPrice} className="text-[15px] font-medium text-white animate-in fade-in transition-colors duration-500 flex flex-col md:block items-end">
+                      <span className="md:hidden text-[11px] text-[#888c99] mb-0.5">Price</span>
+                      {currentPrice ? `$${currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })}` : '—'}
                     </span>
                   </div>
 
                   {/* Volume */}
-                  <div className="col-span-2 flex items-center">
+                  <div className="hidden md:flex col-span-2 items-center">
                     <span className="text-[15px] font-medium text-white">—</span>
                   </div>
 
                   {/* Market Cap */}
-                  <div className="col-span-2 flex items-center">
+                  <div className="hidden md:flex col-span-2 items-center">
                     <span className="text-[15px] font-medium text-white">—</span>
                   </div>
 
                   {/* Change */}
-                  <div className="col-span-2 flex items-center">
+                  <div className="hidden md:flex col-span-2 items-center">
                     <span className="text-[15px] font-semibold text-[#888c99]">
                       —
                     </span>
                   </div>
 
                   {/* Action / Watchlist */}
-                  <div className="col-span-1 flex items-center justify-end pr-2">
+                  <div className="hidden md:flex col-span-1 items-center justify-end pr-2">
                     <button 
                       onClick={(e) => handleToggleWatchlist(e, asset.id)}
                       className="p-2 rounded-full hover:bg-[#22252e] transition-colors"

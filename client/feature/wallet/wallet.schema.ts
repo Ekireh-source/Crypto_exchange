@@ -30,3 +30,30 @@ export const swapResponseSchema = z.object({
 });
 
 export type SwapResponse = z.infer<typeof swapResponseSchema>;
+
+export const transactionSchema = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  asset_id: z.number(),
+  type: z.enum(["deposit", "withdrawal", "swap", "p2p_buy", "p2p_sell"]),
+  status: z.enum(["pending", "confirmed", "failed"]),
+  amount: z.string(),
+  fee: z.string(),
+  tx_hash: z.string().nullable().optional(),
+  from_address: z.string().nullable().optional(),
+  to_address: z.string().nullable().optional(),
+  note: z.string().nullable().optional(),
+  created_at: z.string(),
+  confirmed_at: z.string().nullable().optional(),
+});
+
+export type Transaction = z.infer<typeof transactionSchema>;
+
+export const transactionResponseSchema = z.object({
+  transactions: z.array(transactionSchema),
+  total: z.number(),
+  page: z.number(),
+  limit: z.number(),
+});
+
+export type TransactionResponse = z.infer<typeof transactionResponseSchema>;

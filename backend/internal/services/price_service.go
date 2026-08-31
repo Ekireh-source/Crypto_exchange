@@ -14,15 +14,17 @@ import (
 type PriceService struct {
 	apiKey      string
 	cache       map[string]float64
+	hub         *WSHub
 	lastFetched time.Time
 	mu          sync.RWMutex
 }
 
 // NewPriceService creates a PriceService.
-func NewPriceService(apiKey string) *PriceService {
+func NewPriceService(apiKey string, hub *WSHub) *PriceService {
 	return &PriceService{
 		apiKey: apiKey,
 		cache:  make(map[string]float64),
+		hub:    hub,
 	}
 }
 
@@ -100,4 +102,70 @@ func copyMap(m map[string]float64) map[string]float64 {
 		cp[k] = v
 	}
 	return cp
+}
+
+// StartPriceTicker runs in the background. It updates the real prices every 60 seconds
+// from CoinGecko, but broadcasts simulated micro-fluctuations (+/- 0.05%) every 3 seconds
+// to the WebSocket Hub so the UI feels hyper-active and live.
+func (s *PriceService) StartPriceTicker(ctx context.Context) {
+	ticker := time.NewTicker(3 * time.Second)
+	defer ticker.Stop()
+
+	// Initial fetch
+	_, _ = s.GetPrices(ctx, nil)
+
+	// Keep track of the current simulated prices
+	currentSimulated := make(map[string]float64)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			// Ensure we fetch real prices occasionally by calling GetPrices
+			realPrices, _ := s.GetPrices(ctx, nil)
+
+			if len(realPrices) == 0 {
+				continue
+			}
+
+			// Add micro-volatility
+			simulated := make(map[string]float64)
+			for symbol, realPrice := range realPrices {
+				// Initialize if empty
+				if _, ok := currentSimulated[symbol]; !ok {
+					currentSimulated[symbol] = realPrice
+				}
+
+				// Drift back towards the real price if we deviated too far (> 0.2%)
+				deviation := (currentSimulated[symbol] - realPrice) / realPrice
+				
+				// Calculate random fluctuation (between -0.05% and +0.05%)
+				// Use time.Now().UnixNano() for pseudo-randomness without math/rand overhead
+				randSeed := float64(time.Now().UnixNano()%100) / 100.0 // 0.0 to 1.0
+				fluctuation := (randSeed - 0.5) * 0.001 // -0.0005 to +0.0005
+
+				if deviation > 0.002 { // Too high, force down
+					fluctuation -= 0.0005
+				} else if deviation < -0.002 { // Too low, force up
+					fluctuation += 0.0005
+				}
+
+				// Stablecoins like USDT should have minimal to zero volatility
+				if symbol == "USDT" || symbol == "USDC" {
+					fluctuation = 0
+					currentSimulated[symbol] = realPrice
+				} else {
+					currentSimulated[symbol] = currentSimulated[symbol] * (1.0 + fluctuation)
+				}
+
+				simulated[symbol] = currentSimulated[symbol]
+			}
+
+			// Broadcast to WebSockets
+			if s.hub != nil {
+				s.hub.Broadcast <- simulated
+			}
+		}
+	}
 }

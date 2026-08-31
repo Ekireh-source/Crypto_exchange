@@ -172,6 +172,16 @@ paths:
       description: Processes an outbound crypto transfer to an external address. Requires
         a secret key (sk_).
       parameters:
+      - description: Current Unix timestamp in seconds
+        in: header
+        name: X-Timestamp
+        required: true
+        type: string
+      - description: HMAC-SHA256 signature (timestamp + method + path + body)
+        in: header
+        name: X-Signature
+        required: true
+        type: string
       - description: Send request payload
         in: body
         name: request
@@ -204,6 +214,16 @@ paths:
       description: Executes an internal swap between two supported assets based on
         live prices. Requires a secret key (sk_).
       parameters:
+      - description: Current Unix timestamp in seconds
+        in: header
+        name: X-Timestamp
+        required: true
+        type: string
+      - description: HMAC-SHA256 signature (timestamp + method + path + body)
+        in: header
+        name: X-Signature
+        required: true
+        type: string
       - description: Swap request payload
         in: body
         name: request

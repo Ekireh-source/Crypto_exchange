@@ -27,12 +27,14 @@ var (
 type AuthService struct {
 	cfg      *config.Config
 	userRepo *repository.UserRepo
+	emailSvc EmailService
 }
 
-func NewAuthService(cfg *config.Config, userRepo *repository.UserRepo) *AuthService {
+func NewAuthService(cfg *config.Config, userRepo *repository.UserRepo, emailSvc EmailService) *AuthService {
 	return &AuthService{
 		cfg:      cfg,
 		userRepo: userRepo,
+		emailSvc: emailSvc,
 	}
 }
 
@@ -81,6 +83,21 @@ func (s *AuthService) Register(ctx context.Context, email, password, referralCod
 
 	if err := s.userRepo.Create(ctx, user); err != nil {
 		return nil, fmt.Errorf("creating user: %w", err)
+	}
+
+	// Send welcome email asynchronously
+	if s.emailSvc != nil {
+		go func(uEmail string) {
+			templateData := map[string]string{
+				"Email":  uEmail,
+				"AppURL": "http://localhost:3000", // In a real app, this should come from config
+			}
+			// Use context.Background() because the request context might be cancelled once the HTTP response is sent
+			err := s.emailSvc.SendEmail(context.Background(), uEmail, "Welcome to Crypto Exchange", "welcome.html", templateData)
+			if err != nil {
+				fmt.Printf("Failed to send welcome email to %s: %v\n", uEmail, err)
+			}
+		}(user.Email)
 	}
 
 	return user, nil

@@ -124,6 +124,8 @@ func (h *PublicAPIHandler) GetDepositAddress(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
+// @Param X-Timestamp header string true "Current Unix timestamp in seconds"
+// @Param X-Signature header string true "HMAC-SHA256 signature (timestamp + method + path + body)"
 // @Param request body services.SendRequest true "Send request payload"
 // @Success 200 {object} map[string]interface{} "Transaction details"
 // @Failure 400 {object} map[string]string "Bad Request"
@@ -166,6 +168,8 @@ func (h *PublicAPIHandler) SendCrypto(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
+// @Param X-Timestamp header string true "Current Unix timestamp in seconds"
+// @Param X-Signature header string true "HMAC-SHA256 signature (timestamp + method + path + body)"
 // @Param request body models.SwapRequest true "Swap request payload"
 // @Success 200 {object} map[string]interface{} "Swap details"
 // @Failure 400 {object} map[string]string "Bad Request"

@@ -29,10 +29,20 @@ func RegisterRoutes(e *echo.Echo, cfg *config.Config, pool *db.Pool, adapters ma
 	userRepo := repository.NewUserRepo(pool)
 	walletRepo := repository.NewWalletRepo(pool)
 	p2pRepo := repository.NewP2PRepo(pool)
+	idempotencyRepo := repository.NewIdempotencyRepo(pool)
 
 	// ── Services ──────────────────────────────────────────────────────────────
-	authSvc := services.NewAuthService(cfg, userRepo)
-	priceSvc := services.NewPriceService(cfg.CoinGeckoAPIKey)
+	emailSvc, err := services.NewEmailService(cfg)
+	if err != nil {
+		log.Printf("Warning: Failed to initialize email service (emails will not be sent): %v", err)
+	}
+
+	authSvc := services.NewAuthService(cfg, userRepo, emailSvc)
+	
+	wsHub := services.NewWSHub()
+	go wsHub.Run()
+	
+	priceSvc := services.NewPriceService(cfg.CoinGeckoAPIKey, wsHub)
 	walletSvc := services.NewWalletService(cfg, walletRepo, priceSvc, adapters, scanners)
 	sweeperSvc := services.NewSweeperService(cfg, walletRepo, priceSvc, adapters)
 	withdrawalMonitor := services.NewWithdrawalMonitor(cfg, walletRepo, walletSvc, adapters)
@@ -45,6 +55,7 @@ func RegisterRoutes(e *echo.Echo, cfg *config.Config, pool *db.Pool, adapters ma
 	// 0. Start Sweeper Service and Withdrawal Monitor
 	sweeperSvc.Start(ctx)
 	withdrawalMonitor.Start(ctx)
+	go priceSvc.StartPriceTicker(ctx)
 
 	// 1. Initialize BSC Monitor
 	if bscAdapter, ok := adapters[models.NetworkBSC].(*bsc.Client); ok {
@@ -113,6 +124,7 @@ func RegisterRoutes(e *echo.Echo, cfg *config.Config, pool *db.Pool, adapters ma
 	authHandler := handlers.NewAuthHandler(authSvc)
 	walletHandler := handlers.NewWalletHandler(walletSvc)
 	p2pHandler := handlers.NewP2PHandler(p2pSvc)
+	wsHandler := handlers.NewWSHandler(wsHub)
 
 	// ── Developer API Setup ───────────────────────────────────────────────────
 	apiKeyRepo := repository.NewAPIKeyRepo(pool)
@@ -128,17 +140,22 @@ func RegisterRoutes(e *echo.Echo, cfg *config.Config, pool *db.Pool, adapters ma
 	auth.POST("/register", authHandler.Register)
 	auth.POST("/login", authHandler.Login)
 	auth.POST("/refresh", authHandler.Refresh)
+	auth.POST("/logout", authHandler.Logout)
+
+	v1.GET("/ws/prices", wsHandler.ServeWS)
 
 	// ── Protected Routes (JWT — your UI) ──────────────────────────────────────
 	protected := v1.Group("")
 	protected.Use(middleware.RequireAuth(cfg.JWTSecret))
 
+	idempotentMW := middleware.RequireIdempotency(idempotencyRepo)
+
 	wallet := protected.Group("/wallet")
 	wallet.GET("/assets", walletHandler.GetAssets)
 	wallet.GET("/portfolio", walletHandler.GetPortfolio)
 	wallet.GET("/deposit/:assetID", walletHandler.GetDepositAddress)
-	wallet.POST("/send", walletHandler.SendCrypto)
-	wallet.POST("/swap", walletHandler.HandleSwap)
+	wallet.POST("/send", walletHandler.SendCrypto, idempotentMW)
+	wallet.POST("/swap", walletHandler.HandleSwap, idempotentMW)
 	wallet.GET("/transactions", walletHandler.GetTransactions)
 	wallet.GET("/transactions/:id", walletHandler.GetTransaction)
 	wallet.GET("/watchlist", walletHandler.GetWatchlist)
@@ -148,14 +165,14 @@ func RegisterRoutes(e *echo.Echo, cfg *config.Config, pool *db.Pool, adapters ma
 	user.GET("/profile", authHandler.GetProfile)
 
 	p2p := protected.Group("/p2p")
-	p2p.POST("/orders", p2pHandler.CreateOrder)
+	p2p.POST("/orders", p2pHandler.CreateOrder, idempotentMW)
 	p2p.GET("/orders", p2pHandler.ListActiveOrders)
-	p2p.POST("/orders/:id/trade", p2pHandler.CreateTrade)
+	p2p.POST("/orders/:id/trade", p2pHandler.CreateTrade, idempotentMW)
 	p2p.GET("/trades", p2pHandler.ListUserTrades)
 	p2p.GET("/trades/:id", p2pHandler.GetTrade)
-	p2p.POST("/trades/:id/pay", p2pHandler.MarkTradePaid)
-	p2p.POST("/trades/:id/release", p2pHandler.ReleaseTrade)
-	p2p.POST("/trades/:id/cancel", p2pHandler.CancelTrade)
+	p2p.POST("/trades/:id/pay", p2pHandler.MarkTradePaid, idempotentMW)
+	p2p.POST("/trades/:id/release", p2pHandler.ReleaseTrade, idempotentMW)
+	p2p.POST("/trades/:id/cancel", p2pHandler.CancelTrade, idempotentMW)
 
 	// ── Developer Portal Routes (JWT — for managing apps/keys) ────────────────
 	developer := protected.Group("/developer")
@@ -191,8 +208,8 @@ func RegisterRoutes(e *echo.Echo, cfg *config.Config, pool *db.Pool, adapters ma
 	publicAPI.GET("/assets", publicAPIHandler.GetAssets)
 	publicAPI.GET("/wallet/portfolio", publicAPIHandler.GetPortfolio)
 	publicAPI.GET("/wallet/deposit/:assetID", publicAPIHandler.GetDepositAddress)
-	publicAPI.POST("/wallet/send", publicAPIHandler.SendCrypto)
-	publicAPI.POST("/wallet/swap", publicAPIHandler.SwapCrypto)
+	publicAPI.POST("/wallet/send", publicAPIHandler.SendCrypto, middleware.RequireSignature())
+	publicAPI.POST("/wallet/swap", publicAPIHandler.SwapCrypto, middleware.RequireSignature())
 	publicAPI.GET("/wallet/transactions", publicAPIHandler.GetTransactions)
 }
 

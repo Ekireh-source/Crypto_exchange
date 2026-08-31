@@ -83,9 +83,9 @@ export default function SwapDetailPage() {
         </button>
       </div>
 
-      <div className="w-full bg-[#13151a] border border-[#22252e] rounded-3xl p-6 md:p-8 shadow-2xl relative">
+      <div className="w-full bg-[#13151a] rounded-[6px] p-6 md:p-8 shadow-2xl relative">
         <div className="flex flex-col items-center gap-4 mb-10 text-center">
-          <div className="size-16 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center">
+          <div className="size-16 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center">
             <Icon icon="hugeicons:arrow-data-transfer-horizontal" className="size-8" />
           </div>
           <div>
@@ -98,14 +98,14 @@ export default function SwapDetailPage() {
 
         <div className="flex flex-col gap-4">
           
-          <div className="flex justify-between items-center p-4 bg-[#1c1f26] border border-[#22252e] rounded-2xl">
+          <div className="flex justify-between items-center p-4 bg-[#1c1f26] border border-[#22252e] rounded-[8px]">
             <span className="text-[#888c99] text-sm font-semibold">Amount</span>
             <span className="text-white font-mono font-bold text-lg">
               {transaction.amount} {asset?.symbol}
             </span>
           </div>
 
-          <div className="flex justify-between items-center p-4 bg-[#1c1f26] border border-[#22252e] rounded-2xl">
+          <div className="flex justify-between items-center p-4 bg-[#1c1f26] border border-[#22252e] rounded-[8px]">
             <span className="text-[#888c99] text-sm font-semibold">Asset</span>
             <div className="flex items-center gap-2">
               <span className="text-white font-medium">{asset?.name || `Asset ID: ${transaction.asset_id}`}</span>
@@ -113,17 +113,17 @@ export default function SwapDetailPage() {
             </div>
           </div>
 
-          <div className="flex justify-between items-center p-4 bg-[#1c1f26] border border-[#22252e] rounded-2xl">
+          <div className="flex justify-between items-center p-4 bg-[#1c1f26] border border-[#22252e] rounded-[8px]">
             <span className="text-[#888c99] text-sm font-semibold">Fee</span>
             <span className="text-white font-mono">{transaction.fee || '0'} {asset?.symbol}</span>
           </div>
 
-          <div className="flex justify-between items-center p-4 bg-[#1c1f26] border border-[#22252e] rounded-2xl">
+          <div className="flex justify-between items-center p-4 bg-[#1c1f26] border border-[#22252e] rounded-[8px]">
             <span className="text-[#888c99] text-sm font-semibold">Swap Hash ID</span>
             <span className="text-white font-mono text-xs max-w-[200px] truncate md:max-w-xs">{transaction.tx_hash}</span>
           </div>
 
-          <div className="flex justify-between items-center p-4 bg-[#1c1f26] border border-[#22252e] rounded-2xl">
+          <div className="flex justify-between items-center p-4 bg-[#1c1f26] border border-[#22252e] rounded-[8px]">
             <span className="text-[#888c99] text-sm font-semibold">Date & Time</span>
             <div className="flex flex-col items-end">
               <span className="text-white font-medium">

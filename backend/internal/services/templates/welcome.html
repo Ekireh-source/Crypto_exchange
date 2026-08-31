@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Welcome to Crypto Exchange</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            color: #333333;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eeeeee;
+        }
+        .content {
+            padding: 20px 0;
+            line-height: 1.6;
+        }
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #777777;
+            padding-top: 20px;
+            border-top: 1px solid #eeeeee;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Welcome to Crypto Exchange!</h2>
+        </div>
+        <div class="content">
+            <p>Hi {{.Email}},</p>
+            <p>Thank you for registering. We are thrilled to have you on board!</p>
+            <p>You can now log in, deposit crypto, and start trading.</p>
+            
+            <div style="text-align: center;">
+                <a href="{{.AppURL}}/login" class="btn">Login to Your Account</a>
+            </div>
+        </div>
+        <div class="footer">
+            <p>If you didn't create an account, you can safely ignore this email.</p>
+            <p>&copy; 2026 Crypto Exchange. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

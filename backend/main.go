@@ -51,10 +51,13 @@ func main() {
 
 	// ── Migrations ────────────────────────────────────────────────────────────
 	migrationsDir := "internal/db/migrations"
-	if err := db.Migrate(ctx, pool, migrationsDir); err != nil {
-		log.Fatalf("running migrations: %v", err)
+	if len(os.Args) > 1 && os.Args[1] == "migrate" {
+		if err := db.Migrate(ctx, pool, migrationsDir); err != nil {
+			log.Fatalf("running migrations: %v", err)
+		}
+		log.Println("✓ migrations applied successfully")
+		return
 	}
-	log.Println("✓ migrations applied")
 
 	// ── Echo HTTP server ──────────────────────────────────────────────────────
 	e := echo.New()
@@ -65,8 +68,9 @@ func main() {
 	e.Use(middleware.Recover())
 	e.Use(middleware.Logger())
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins: cfg.AllowedOrigins,
-		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization, "X-API-Key"},
+		AllowOrigins:     cfg.AllowedOrigins,
+		AllowHeaders:     []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization, "X-API-Key"},
+		AllowCredentials: true,
 	}))
 	e.Use(middleware.RequestID())
 

@@ -6,6 +6,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { logout, selectUser } from "@/store/authSlice";
 import { Icon } from "@iconify/react";
 import Image from "next/image";
+import apiRequest from "@/lib/apiRequest";
 
 import {
   DropdownMenu,
@@ -41,9 +42,15 @@ export default function FloatingNavbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleLogout = () => {
-    dispatch(logout());
-    router.push("/login");
+  const handleLogout = async () => {
+    try {
+      await apiRequest.post("/auth/logout");
+    } catch (error) {
+      console.error("Failed to clear cookies on logout:", error);
+    } finally {
+      dispatch(logout());
+      router.push("/login");
+    }
   };
 
   const currentUser = useSelector(selectUser) as IUser;
@@ -213,7 +220,7 @@ export default function FloatingNavbar() {
 
       {/* Mobile Dropdown */}
       {menuOpen && (
-        <div className="absolute left-4 right-4 mt-3 origin-top xl:hidden z-[60] rounded-[16px] border border-[#22252e] bg-[#16181d] shadow-2xl p-3 animate-in slide-in-from-top-2 fade-in duration-200">
+        <div className="pointer-events-auto absolute left-4 right-4 mt-3 origin-top xl:hidden z-[60] rounded-[16px] border border-[#22252e] bg-[#16181d] shadow-2xl p-3 animate-in slide-in-from-top-2 fade-in duration-200">
           <div className="flex flex-col gap-1">
             {ALL_LINKS.map((link) => {
               const isActive = pathname === link.href || (link.href !== "/dashboard" && pathname?.startsWith(link.href));

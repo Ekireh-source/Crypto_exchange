@@ -4,6 +4,9 @@ build:
 run: build
 	./bin/exchange
 
+migrate: build
+	./bin/exchange migrate
+
 test:
 	go test -v ./...
 

@@ -63,7 +63,13 @@ export default function CreateP2PAd() {
       toast.success("Ad created successfully!");
       router.push("/p2p");
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to create ad");
+      const msg = 
+        error.response?.data?.message || 
+        error.response?.data?.error || 
+        (typeof error.response?.data === 'string' ? error.response.data : null) || 
+        error.message || 
+        "Failed to create ad";
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
@@ -78,7 +84,7 @@ export default function CreateP2PAd() {
   }
 
   return (
-    <div className="flex flex-col flex-1 h-full max-w-[1440px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 gap-8 overflow-y-auto">
+    <div className="flex flex-col w-full animate-in fade-in duration-500 pb-20 gap-8">
       {/* Header */}
       <div className="flex items-center gap-4">
         <button
@@ -94,7 +100,7 @@ export default function CreateP2PAd() {
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="bg-[#13151a] rounded-2xl border border-[#22252e] p-6 flex flex-col gap-6">
+      <form onSubmit={handleSubmit} className="bg-[#13151a] rounded-[6px] p-6 flex flex-col gap-6">
         
         {/* Asset Selection */}
         <div className="flex flex-col gap-2">
@@ -104,7 +110,7 @@ export default function CreateP2PAd() {
               <div
                 key={b.asset.id}
                 onClick={() => setAssetId(b.asset.id)}
-                className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                className={`flex items-center gap-3 p-3 rounded-[8px] border cursor-pointer transition-all ${
                   assetId === b.asset.id
                     ? "bg-blue-600/10 border-blue-500"
                     : "bg-[#1c1f26] border-[#22252e] hover:bg-[#22252e]"
@@ -133,7 +139,7 @@ export default function CreateP2PAd() {
             <select
               value={fiatCurrency}
               onChange={(e) => setFiatCurrency(e.target.value)}
-              className="w-full bg-[#1c1f26] border border-[#22252e] rounded-xl px-4 py-3.5 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 appearance-none font-medium"
+              className="w-full bg-[#1c1f26] border border-[#22252e] rounded-[8px] px-4 py-3.5 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 appearance-none font-medium"
             >
               <option value="USD">USD - US Dollar</option>
               <option value="EUR">EUR - Euro</option>
@@ -149,7 +155,7 @@ export default function CreateP2PAd() {
               value={rate}
               onChange={(e) => setRate(e.target.value)}
               placeholder="e.g. 1.05"
-              className="w-full bg-[#1c1f26] border border-[#22252e] rounded-xl px-4 py-3.5 text-white placeholder-[#888c99]/50 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium"
+              className="w-full bg-[#1c1f26] border border-[#22252e] rounded-[8px] px-4 py-3.5 text-white placeholder-[#888c99]/50 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium"
               required
             />
           </div>
@@ -165,7 +171,7 @@ export default function CreateP2PAd() {
               value={totalAmount}
               onChange={(e) => setTotalAmount(e.target.value)}
               placeholder="Total crypto you want to lock in this ad"
-              className="w-full bg-[#1c1f26] border border-[#22252e] rounded-xl px-4 py-3.5 text-white placeholder-[#888c99]/50 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium pr-24"
+              className="w-full bg-[#1c1f26] border border-[#22252e] rounded-[8px] px-4 py-3.5 text-white placeholder-[#888c99]/50 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium pr-24"
               required
             />
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
@@ -194,7 +200,7 @@ export default function CreateP2PAd() {
               value={minAmount}
               onChange={(e) => setMinAmount(e.target.value)}
               placeholder="Minimum crypto per order"
-              className="w-full bg-[#1c1f26] border border-[#22252e] rounded-xl px-4 py-3.5 text-white placeholder-[#888c99]/50 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium"
+              className="w-full bg-[#1c1f26] border border-[#22252e] rounded-[8px] px-4 py-3.5 text-white placeholder-[#888c99]/50 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium"
               required
             />
           </div>
@@ -206,7 +212,7 @@ export default function CreateP2PAd() {
               value={maxAmount}
               onChange={(e) => setMaxAmount(e.target.value)}
               placeholder="Maximum crypto per order"
-              className="w-full bg-[#1c1f26] border border-[#22252e] rounded-xl px-4 py-3.5 text-white placeholder-[#888c99]/50 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium"
+              className="w-full bg-[#1c1f26] border border-[#22252e] rounded-[8px] px-4 py-3.5 text-white placeholder-[#888c99]/50 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium"
               required
             />
           </div>
@@ -218,7 +224,7 @@ export default function CreateP2PAd() {
           <select
             value={paymentMethod}
             onChange={(e) => setPaymentMethod(e.target.value)}
-            className="w-full bg-[#1c1f26] border border-[#22252e] rounded-xl px-4 py-3.5 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 appearance-none font-medium"
+            className="w-full bg-[#1c1f26] border border-[#22252e] rounded-[8px] px-4 py-3.5 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 appearance-none font-medium"
           >
             <option value="Bank Transfer">Bank Transfer</option>
             <option value="Cash App">Cash App</option>
@@ -228,7 +234,7 @@ export default function CreateP2PAd() {
         </div>
 
         {/* Note */}
-        <div className="p-4 bg-blue-600/10 rounded-xl border border-blue-500/20">
+        <div className="p-4 bg-blue-600/10 rounded-[8px] border border-blue-500/20">
           <div className="flex gap-3">
             <Icon icon="hugeicons:information-circle" className="size-5 text-blue-400 shrink-0 mt-0.5" />
             <p className="text-sm text-blue-400 leading-relaxed">
@@ -241,7 +247,7 @@ export default function CreateP2PAd() {
         <button
           type="submit"
           disabled={submitting || !assetId}
-          className="w-full py-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-600/20 flex justify-center items-center gap-2 mt-4"
+          className="w-full py-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-[8px] transition-all shadow-lg shadow-blue-600/20 flex justify-center items-center gap-2 mt-4"
         >
           {submitting ? (
             <>
