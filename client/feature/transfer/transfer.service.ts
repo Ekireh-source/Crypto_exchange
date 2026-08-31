@@ -13,8 +13,9 @@ export const transferService = {
     return depositAddressResponseSchema.parse(response.data);
   },
 
-  sendCrypto: async (data: SendRequest): Promise<TransactionResponse> => {
-    const response = await apiRequest.post('/wallet/send', data);
+  sendCrypto: async (data: SendRequest, idempotencyKey?: string): Promise<TransactionResponse> => {
+    const config = idempotencyKey ? { headers: { 'Idempotency-Key': idempotencyKey } } : undefined;
+    const response = await apiRequest.post('/wallet/send', data, config);
     return transactionResponseSchema.parse(response.data);
   },
 };

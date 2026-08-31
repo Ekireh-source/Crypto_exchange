@@ -39,6 +39,7 @@ func RequireAPIKey(apiKeySvc *services.APIKeyService) echo.MiddlewareFunc {
 			// Inject into context — same key as JWT middleware uses
 			c.Set("apiKeyCtx", keyCtx)
 			c.Set("userID", keyCtx.OwnerUserID)
+			c.Set("rawAPIKey", rawKey)
 
 			return next(c)
 		}

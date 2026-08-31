@@ -206,6 +206,20 @@ const docTemplate = `{
                 "summary": "Send crypto",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "Current Unix timestamp in seconds",
+                        "name": "X-Timestamp",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "HMAC-SHA256 signature (timestamp + method + path + body)",
+                        "name": "X-Signature",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
                         "description": "Send request payload",
                         "name": "request",
                         "in": "body",
@@ -254,6 +268,20 @@ const docTemplate = `{
                 ],
                 "summary": "Swap crypto",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Current Unix timestamp in seconds",
+                        "name": "X-Timestamp",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "HMAC-SHA256 signature (timestamp + method + path + body)",
+                        "name": "X-Signature",
+                        "in": "header",
+                        "required": true
+                    },
                     {
                         "description": "Swap request payload",
                         "name": "request",

@@ -52,7 +52,7 @@ export default function MyTrades() {
   };
 
   return (
-    <div className="flex flex-col flex-1 h-full max-w-[1440px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 gap-8 overflow-y-auto">
+    <div className="flex flex-col w-full animate-in fade-in duration-500 pb-20 gap-8">
       {/* Header */}
       <div className="flex items-center gap-4">
         <button
@@ -68,7 +68,7 @@ export default function MyTrades() {
       </div>
 
       {/* Trades List */}
-      <div className="bg-[#13151a] rounded-2xl border border-[#22252e] overflow-hidden flex flex-col flex-1">
+      <div className="bg-[#13151a] rounded-[6px] flex flex-col">
         {loading ? (
           <div className="p-12 flex items-center justify-center">
             <Icon icon="svg-spinners:180-ring" className="size-8 text-blue-500" />
@@ -81,57 +81,69 @@ export default function MyTrades() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-[#1c1f26] border-b border-[#22252e]">
-                  <th className="py-4 px-6 text-xs font-semibold text-[#888c99] uppercase tracking-wider">Role</th>
-                  <th className="py-4 px-6 text-xs font-semibold text-[#888c99] uppercase tracking-wider">Amount</th>
-                  <th className="py-4 px-6 text-xs font-semibold text-[#888c99] uppercase tracking-wider">Fiat Amount</th>
-                  <th className="py-4 px-6 text-xs font-semibold text-[#888c99] uppercase tracking-wider">Status</th>
-                  <th className="py-4 px-6 text-xs font-semibold text-[#888c99] uppercase tracking-wider">Date</th>
-                  <th className="py-4 px-6 text-right"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#22252e]">
-                {trades.map((trade) => {
-                  const isBuyer = trade.buyer_id === user?.id;
-                  const symbol = getAssetSymbol(trade.asset_id);
-                  return (
-                    <tr 
-                      key={trade.id} 
-                      onClick={() => router.push(`/p2p/trade/${trade.id}`)}
-                      className="hover:bg-[#1c1f26]/60 transition-colors cursor-pointer group"
-                    >
-                      <td className="py-4 px-6">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border ${isBuyer ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-purple-500/10 text-purple-400 border-purple-500/20'}`}>
-                          {isBuyer ? "Buy" : "Sell"}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6">
-                        <p className="text-sm font-bold text-white">{parseFloat(trade.amount).toFixed(4)} {symbol}</p>
-                      </td>
-                      <td className="py-4 px-6">
-                        <p className="text-sm font-medium text-white">{parseFloat(trade.fiat_amount).toLocaleString()} USD</p>
-                      </td>
-                      <td className="py-4 px-6">
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${getStatusColor(trade.status)}`}>
-                          {trade.status.replace("_", " ")}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6">
-                        <span className="text-sm text-[#888c99]">
-                          {new Date(trade.created_at).toLocaleString()}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6 text-right">
-                        <Icon icon="hugeicons:arrow-right-01" className="size-5 text-[#888c99] group-hover:text-white transition-colors ml-auto" />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="flex flex-col w-full">
+            {/* Table Header */}
+            <div className="flex md:grid md:grid-cols-12 justify-between gap-4 p-6 border-b border-[#22252e] text-[13px] font-semibold text-[#888c99] uppercase tracking-wider bg-[#1c1f26]/30">
+              <div className="col-span-2">Role</div>
+              <div className="col-span-3">Amount</div>
+              <div className="col-span-3 hidden md:block">Fiat Amount</div>
+              <div className="col-span-2 hidden md:block">Status</div>
+              <div className="col-span-2 hidden md:block">Date</div>
+            </div>
+
+            {/* Table Body */}
+            <div className="flex flex-col divide-y divide-[#22252e]">
+              {trades.map((trade) => {
+                const isBuyer = trade.buyer_id === user?.id;
+                const symbol = getAssetSymbol(trade.asset_id);
+                return (
+                  <div 
+                    key={trade.id} 
+                    onClick={() => router.push(`/p2p/trade/${trade.id}`)}
+                    className="flex flex-wrap md:flex-nowrap md:grid md:grid-cols-12 justify-between items-center gap-y-4 md:gap-4 p-6 hover:bg-[#1c1f26]/60 transition-colors cursor-pointer group"
+                  >
+                    {/* Role */}
+                    <div className="w-1/2 md:w-auto col-span-2">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] text-xs font-bold border ${isBuyer ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-sky-500/10 text-sky-400 border-sky-500/20'}`}>
+                        {isBuyer ? "Buy" : "Sell"}
+                      </span>
+                    </div>
+
+                    {/* Amount */}
+                    <div className="w-1/2 md:w-auto col-span-3 flex flex-col items-end md:items-start md:block">
+                      <span className="md:hidden text-[11px] text-[#888c99] mb-0.5">Amount</span>
+                      <p className="text-sm font-bold text-white">{parseFloat(trade.amount).toFixed(4)} {symbol}</p>
+                    </div>
+
+                    {/* Fiat Amount */}
+                    <div className="w-1/2 md:w-auto col-span-3 flex flex-col md:block mt-2 md:mt-0 pt-2 md:pt-0 border-t border-[#22252e]/50 md:border-0">
+                      <span className="md:hidden text-[11px] text-[#888c99] mb-0.5">Fiat Amount</span>
+                      <p className="text-sm font-medium text-white">{parseFloat(trade.fiat_amount).toLocaleString()} USD</p>
+                    </div>
+
+                    {/* Status */}
+                    <div className="w-1/2 md:w-auto col-span-2 flex flex-col items-end md:items-start md:block mt-2 md:mt-0 pt-2 md:pt-0 border-t border-[#22252e]/50 md:border-0">
+                      <span className="md:hidden text-[11px] text-[#888c99] mb-0.5">Status</span>
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-[6px] text-[10px] font-bold uppercase tracking-wider border ${getStatusColor(trade.status)}`}>
+                        {trade.status.replace("_", " ")}
+                      </span>
+                    </div>
+
+                    {/* Date */}
+                    <div className="col-span-1 hidden md:block">
+                      <span className="text-xs text-[#888c99]">
+                        {new Date(trade.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+
+                    {/* Arrow */}
+                    <div className="col-span-1 hidden md:flex justify-end">
+                      <Icon icon="hugeicons:arrow-right-01" className="size-5 text-[#888c99] group-hover:text-white transition-colors" />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>

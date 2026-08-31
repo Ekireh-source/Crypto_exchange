@@ -33,8 +33,6 @@ export default function LoginPage() {
       dispatch(
         setCredentials({
           user: res.user,
-          accessToken: res.access_token,
-          refreshToken: res.refresh_token,
         })
       );
       if (res.user.role === 'admin' || res.user.role === 'superadmin') {

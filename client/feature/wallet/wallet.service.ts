@@ -4,6 +4,8 @@ import {
   type PortfolioResponse,
   type SwapRequest,
   type SwapResponse,
+  transactionResponseSchema,
+  type TransactionResponse,
 } from './wallet.schema';
 
 export const walletService = {
@@ -21,5 +23,9 @@ export const walletService = {
   },
   toggleWatchlist: async (assetId: number): Promise<void> => {
     await apiRequest.post('/wallet/watchlist/toggle', { asset_id: assetId });
+  },
+  getTransactions: async (limit: number = 5): Promise<TransactionResponse> => {
+    const response = await apiRequest.get(`/wallet/transactions?limit=${limit}`);
+    return transactionResponseSchema.parse(response.data);
   },
 };

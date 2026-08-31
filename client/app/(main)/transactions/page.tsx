@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import { Icon } from '@iconify/react';
 import { transactionsService } from '@/feature/transactions/transactions.service';
 import { assetsService } from '@/feature/assets/assets.service';
@@ -117,7 +118,7 @@ export default function TransactionsPage() {
       </div>
 
       {/* Main Container */}
-      <div className="w-full bg-[#13151a] border border-[#22252e] rounded-[24px] overflow-hidden shadow-2xl flex flex-col">
+      <div className="w-full bg-[#13151a] rounded-[8px] overflow-hidden  flex flex-col">
         
         {/* Filters Bar */}
         <div className="p-4 sm:p-6 border-b border-[#22252e] flex items-center justify-between flex-wrap gap-4 bg-[#16181d]/50">
@@ -129,7 +130,7 @@ export default function TransactionsPage() {
                   setActiveFilter(tab.value);
                   setPage(1);
                 }}
-                className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
+                className={`px-4 py-2 rounded-[8px] text-sm font-semibold whitespace-nowrap transition-all ${
                   activeFilter === tab.value
                     ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
                     : 'bg-[#1c1f26] text-[#888c99] hover:text-white hover:bg-[#252933]'
@@ -166,115 +167,108 @@ export default function TransactionsPage() {
               </div>
             </div>
           ) : (
-            <table className="w-full text-left border-collapse min-w-[700px]">
-              <thead>
-                <tr className="border-b border-[#22252e] text-[13px] font-semibold text-[#888c99] bg-[#16181d]/30">
-                  <th className="py-4 px-6">Type & Asset</th>
-                  <th className="py-4 px-6">Amount</th>
-                  <th className="py-4 px-6">Status</th>
-                  <th className="py-4 px-6">Tx Hash / Address</th>
-                  <th className="py-4 px-6 text-right">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#22252e]">
+            <div className="w-full">
+              {/* Table Header */}
+              <div className="hidden md:grid md:grid-cols-12 gap-4 pb-4 px-6 border-b border-[#22252e] text-[13px] font-semibold text-[#888c99] bg-[#16181d]/30">
+                <div className="col-span-4 py-3">Type & Asset</div>
+                <div className="col-span-2 py-3">Amount</div>
+                <div className="col-span-2 py-3">Status</div>
+                <div className="col-span-2 py-3">Tx Hash</div>
+                <div className="col-span-2 py-3 text-right">Date</div>
+              </div>
+
+              <div className="flex flex-col gap-2 mt-2">
                 {transactions.map((tx) => {
                   const asset = assetMap.get(tx.asset_id);
                   const iconInfo = getTypeIcon(tx.type);
                   const hashOrAddr = tx.tx_hash || tx.to_address || tx.id;
 
                   return (
-                    <tr
+                    <Link
+                      href={`/transactions/${tx.id}`}
                       key={tx.id}
-                      className="hover:bg-[#1c1f26]/60 transition-colors group text-sm"
+                      className="flex flex-wrap md:flex-nowrap md:grid md:grid-cols-12 justify-between items-center gap-y-4 md:gap-4 p-4 md:p-6 bg-[#16181d]/30 hover:bg-[#1c1f26]/80 transition-colors cursor-pointer group text-sm block rounded-[8px]"
                     >
-                      {/* Type & Asset */}
-                      <td className="py-4 px-6">
-                        <div className="flex items-center gap-3.5">
-                          <div
-                            className={`size-10 rounded-full flex items-center justify-center border shrink-0 ${iconInfo.color}`}
-                          >
-                            <Icon icon={iconInfo.icon} className="size-5" />
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="font-bold text-white capitalize leading-tight">
-                              {tx.type.replace('_', ' ')}
-                            </span>
-                            <span className="text-xs text-[#888c99]">
-                              {asset ? `${asset.name} (${asset.symbol})` : `Asset #${tx.asset_id}`}
-                            </span>
-                          </div>
+                      {/* Asset */}
+                      <div className="w-1/2 md:w-auto col-span-4 flex items-center gap-3.5">
+                        <div
+                          className={`size-10 rounded-full flex items-center justify-center border shrink-0 ${iconInfo.color}`}
+                        >
+                          <Icon icon={iconInfo.icon} className="size-5" />
                         </div>
-                      </td>
-
-                      {/* Amount */}
-                      <td className="py-4 px-6">
                         <div className="flex flex-col">
-                          <span
-                            className={`font-mono font-bold ${
-                              tx.type === 'deposit' ? 'text-emerald-400' : 'text-white'
-                            }`}
-                          >
-                            {tx.type === 'deposit' ? '+' : '-'}{tx.amount} {asset?.symbol || ''}
+                          <span className="font-bold text-white capitalize leading-tight">
+                            {tx.type.replace('_', ' ')}
                           </span>
-                          {tx.fee && (
-                            <span className="text-xs text-[#888c99]">Fee: {tx.fee}</span>
-                          )}
+                          <span className="text-xs text-[#888c99]">
+                            {asset ? `${asset.name} (${asset.symbol})` : `Asset #${tx.asset_id}`}
+                          </span>
                         </div>
-                      </td>
+                      </div>
 
-                      {/* Status */}
-                      <td className="py-4 px-6">
+                      {/* Amount & Mobile Status */}
+                      <div className="w-1/2 md:w-auto col-span-2 flex flex-col items-end md:items-start md:block">
+                        <span className="md:hidden text-[11px] text-[#888c99] mb-0.5">Amount</span>
                         <span
-                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${getStatusBadge(
+                          className={`font-mono font-bold ${
+                            tx.type === 'deposit' ? 'text-emerald-400' : 'text-white'
+                          } block`}
+                        >
+                          {tx.type === 'deposit' ? '+' : '-'}{parseFloat(tx.amount || '0').toLocaleString(undefined, { maximumFractionDigits: 6 })} {asset?.symbol || ''}
+                        </span>
+                        <div className="mt-1 md:hidden">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-[6px] text-[10px] font-bold uppercase tracking-wider border ${getStatusBadge(
+                              tx.status
+                            )}`}
+                          >
+                            {tx.status}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Status (Desktop only) */}
+                      <div className="hidden md:flex w-full md:w-auto col-span-2 items-center md:items-start md:justify-start">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-1 rounded-[6px] text-xs font-bold uppercase tracking-wider border ${getStatusBadge(
                             tx.status
                           )}`}
                         >
                           {tx.status}
                         </span>
-                      </td>
+                      </div>
 
-                      {/* Hash / Address */}
-                      <td className="py-4 px-6">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs text-[#888c99] max-w-[140px] truncate">
-                            {hashOrAddr}
-                          </span>
-                          <button
-                            onClick={() => handleCopy(hashOrAddr, tx.id)}
-                            className="text-[#888c99] hover:text-white transition-colors"
-                            title="Copy string"
-                          >
-                            <Icon
-                              icon={
-                                copiedId === tx.id
-                                  ? 'hugeicons:checkmark-circle-02'
-                                  : 'hugeicons:copy-01'
-                              }
-                              className={`size-4 ${copiedId === tx.id ? 'text-emerald-400' : ''}`}
-                            />
-                          </button>
-                        </div>
-                      </td>
+                      {/* Hash (Desktop only) */}
+                      <div className="hidden md:flex w-full md:w-auto col-span-2 items-center gap-2">
+                        <span className="font-mono text-xs text-[#888c99] max-w-[100px] lg:max-w-[140px] truncate">
+                          {hashOrAddr}
+                        </span>
+                        <button
+                          onClick={(e) => { e.preventDefault(); handleCopy(hashOrAddr, tx.id); }}
+                          className="text-[#888c99] hover:text-white transition-colors"
+                          title="Copy"
+                        >
+                          <Icon
+                            icon={copiedId === tx.id ? 'hugeicons:checkmark-circle-02' : 'hugeicons:copy-01'}
+                            className={`size-4 ${copiedId === tx.id ? 'text-emerald-400' : ''}`}
+                          />
+                        </button>
+                      </div>
 
-                      {/* Date */}
-                      <td className="py-4 px-6 text-right">
-                        <div className="flex flex-col items-end">
-                          <span className="text-xs font-semibold text-white">
-                            {new Date(tx.created_at).toLocaleDateString()}
-                          </span>
-                          <span className="text-[11px] text-[#888c99]">
-                            {new Date(tx.created_at).toLocaleTimeString([], {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
+                      {/* Date (Desktop only) */}
+                      <div className="hidden md:flex w-full md:w-auto col-span-2 flex-col items-end text-right">
+                        <span className="text-xs font-semibold text-white">
+                          {new Date(tx.created_at).toLocaleDateString()}
+                        </span>
+                        <span className="text-[11px] text-[#888c99]">
+                          {new Date(tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    </Link>
                   );
                 })}
-              </tbody>
-            </table>
+              </div>
+            </div>
           )}
         </div>
 

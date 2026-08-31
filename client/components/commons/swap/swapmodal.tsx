@@ -33,7 +33,7 @@ export default function SwapModal({ isOpen, onClose, onSuccess }: SwapModalProps
 
   useEffect(() => {
     if (!isOpen) return;
-    
+
     const fetchData = async () => {
       try {
         setLoading(true);
@@ -110,13 +110,13 @@ export default function SwapModal({ isOpen, onClose, onSuccess }: SwapModalProps
       });
       setSuccess('Swap successful!');
       setAmount('');
-      
+
       // Refresh portfolio
       const portData = await walletService.getPortfolio();
       setPortfolio(portData);
-      
+
       if (onSuccess) onSuccess();
-      
+
       // Close modal after a short delay so user sees success message
       setTimeout(() => {
         handleClose();
@@ -130,8 +130,8 @@ export default function SwapModal({ isOpen, onClose, onSuccess }: SwapModalProps
 
   return (
     <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="w-full max-w-[700px] bg-[#13151a] border border-[#22252e] rounded-[24px] shadow-2xl p-6 flex flex-col gap-6 text-white font-sans animate-in zoom-in-95 duration-200">
-        
+      <div className="w-full max-w-[700px] bg-[#13151a] border border-[#22252e] rounded-[6px] shadow-2xl p-6 flex flex-col gap-6 text-white font-sans animate-in zoom-in-95 duration-200">
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex flex-col">
@@ -168,136 +168,137 @@ export default function SwapModal({ isOpen, onClose, onSuccess }: SwapModalProps
               </div>
             )}
 
-            <form onSubmit={handleSwap} className="flex flex-col gap-2 relative">
-              {/* FROM BOX */}
-              <div className={`bg-[#1c1f26] border border-[#22252e] hover:border-[#3a3f4e] transition-colors rounded-2xl p-4 flex flex-col gap-3 relative ${isFromDropdownOpen ? 'z-40' : 'z-10'}`}>
-                <div className="flex justify-between items-center text-[#888c99] text-[13px] font-semibold">
-                  <span>Pay</span>
-                  <span>Available: {parseFloat(fromBalance).toLocaleString('en-US', { maximumFractionDigits: 6 })}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="number"
-                    step="any"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="0.00"
-                    className="w-full bg-transparent text-[28px] font-medium text-white placeholder-[#3a3f4e] outline-none"
-                  />
+            <form onSubmit={handleSwap} className="flex flex-col gap-4">
+              <div className="relative flex flex-col gap-2">
+                {/* FROM BOX */}
+                <div className={`bg-[#1c1f26] border border-[#22252e] hover:border-[#3a3f4e] transition-colors rounded-[8px] p-4 flex flex-col gap-3 relative ${isFromDropdownOpen ? 'z-40' : 'z-10'}`}>
+                  <div className="flex justify-between items-center text-[#888c99] text-[13px] font-semibold">
+                    <span>Pay</span>
+                    <span>Available: {parseFloat(fromBalance).toLocaleString('en-US', { maximumFractionDigits: 6 })}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="number"
+                      step="any"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      placeholder="0.00"
+                      className="w-full bg-transparent text-[28px] font-medium text-white placeholder-[#3a3f4e] outline-none"
+                    />
 
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => { setIsFromDropdownOpen(!isFromDropdownOpen); setIsToDropdownOpen(false); }}
-                      className="flex items-center justify-between gap-2 bg-[#22252e] hover:bg-[#2c303b] transition-colors rounded-full py-1.5 pl-1.5 pr-3 shrink-0 min-w-[160px]"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="relative size-7 rounded-full bg-white/10 overflow-hidden flex items-center justify-center shrink-0">
-                          {fromAsset?.logo_url ? (
-                            <Image src={fromAsset.logo_url} alt={fromAsset.symbol} fill className="object-cover" />
-                          ) : (
-                            <span className="text-white text-[10px] font-bold">{fromAsset?.symbol[0]}</span>
-                          )}
-                        </div>
-                        <span className="text-white font-semibold text-sm truncate max-w-[90px] text-left">{fromAsset?.name}</span>
-                      </div>
-                      <Icon icon="hugeicons:arrow-down-01" className="size-4 text-[#888c99] shrink-0" />
-                    </button>
-
-                    {isFromDropdownOpen && (
-                      <div className="absolute right-0 top-12 w-64 bg-[#1c1f26] border border-[#22252e] rounded-xl overflow-hidden shadow-xl z-50">
-                        {assets.map(a => (
-                          <div
-                            key={a.id}
-                            onClick={() => { setFromAssetId(a.id); setIsFromDropdownOpen(false); }}
-                            className="flex items-center gap-3 p-3 hover:bg-[#22252e] cursor-pointer transition-colors"
-                          >
-                            <div className="relative size-6 rounded-full bg-white/10 overflow-hidden shrink-0">
-                              {a.logo_url && <Image src={a.logo_url} alt={a.symbol} fill className="object-cover" />}
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="text-white text-sm font-semibold leading-tight">{a.name} ({a.symbol})</span>
-                              <span className="text-[#888c99] text-[10px] uppercase font-medium">{a.network}</span>
-                            </div>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => { setIsFromDropdownOpen(!isFromDropdownOpen); setIsToDropdownOpen(false); }}
+                        className="flex items-center justify-between gap-2 bg-[#22252e] hover:bg-[#2c303b] transition-colors rounded-[8px] py-1.5 pl-1.5 pr-3 shrink-0 min-w-[160px]"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="relative size-7 rounded-full bg-white/10 overflow-hidden flex items-center justify-center shrink-0">
+                            {fromAsset?.logo_url ? (
+                              <Image src={fromAsset.logo_url} alt={fromAsset.symbol} fill className="object-cover" />
+                            ) : (
+                              <span className="text-white text-[10px] font-bold">{fromAsset?.symbol[0]}</span>
+                            )}
                           </div>
-                        ))}
-                      </div>
-                    )}
+                          <span className="text-white font-semibold text-sm truncate max-w-[90px] text-left">{fromAsset?.name}</span>
+                        </div>
+                        <Icon icon="hugeicons:arrow-down-01" className="size-4 text-[#888c99] shrink-0" />
+                      </button>
+
+                      {isFromDropdownOpen && (
+                        <div className="absolute right-0 top-12 w-64 bg-[#1c1f26] border border-[#22252e] rounded-[8px] overflow-hidden shadow-xl z-50">
+                          {assets.map(a => (
+                            <div
+                              key={a.id}
+                              onClick={() => { setFromAssetId(a.id); setIsFromDropdownOpen(false); }}
+                              className="flex items-center gap-3 p-3 hover:bg-[#22252e] cursor-pointer transition-colors"
+                            >
+                              <div className="relative size-6 rounded-full bg-white/10 overflow-hidden shrink-0">
+                                {a.logo_url && <Image src={a.logo_url} alt={a.symbol} fill className="object-cover" />}
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-white text-sm font-semibold leading-tight">{a.name} ({a.symbol})</span>
+                                <span className="text-[#888c99] text-[10px] uppercase font-medium">{a.network}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* SWAP ICON BUTTON */}
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+                  <button
+                    type="button"
+                    onClick={handleSwapClick}
+                    className="size-10 rounded-full bg-[#22252e] border-4 border-[#13151a] hover:bg-[#2c303b] text-white flex items-center justify-center transition-transform hover:rotate-180 duration-300"
+                  >
+                    <Icon icon="hugeicons:arrow-up-down" className="size-5" />
+                  </button>
+                </div>
+
+                {/* TO BOX */}
+                <div className={`bg-[#1c1f26] border border-[#22252e] hover:border-[#3a3f4e] transition-colors rounded-[8px] p-4 flex flex-col gap-3 relative ${isToDropdownOpen ? 'z-40' : 'z-10'}`}>
+                  <div className="flex justify-between items-center text-[#888c99] text-[13px] font-semibold">
+                    <span>Receive (Estimated)</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="text"
+                      readOnly
+                      value={amount ? estimatedReceive : ''}
+                      placeholder="0.00"
+                      className="w-full bg-transparent text-[28px] font-medium text-white placeholder-[#3a3f4e] outline-none cursor-not-allowed opacity-80"
+                    />
+
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => { setIsToDropdownOpen(!isToDropdownOpen); setIsFromDropdownOpen(false); }}
+                        className="flex items-center justify-between gap-2 bg-[#22252e] hover:bg-[#2c303b] transition-colors rounded-[8px] py-1.5 pl-1.5 pr-3 shrink-0 min-w-[160px]"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="relative size-7 rounded-full bg-white/10 overflow-hidden flex items-center justify-center shrink-0">
+                            {toAsset?.logo_url ? (
+                              <Image src={toAsset.logo_url} alt={toAsset.symbol} fill className="object-cover" />
+                            ) : (
+                              <span className="text-white text-[10px] font-bold">{toAsset?.symbol[0]}</span>
+                            )}
+                          </div>
+                          <span className="text-white font-semibold text-sm truncate max-w-[90px] text-left">{toAsset?.name}</span>
+                        </div>
+                        <Icon icon="hugeicons:arrow-down-01" className="size-4 text-[#888c99] shrink-0" />
+                      </button>
+
+                      {isToDropdownOpen && (
+                        <div className="absolute right-0 top-12 w-64 bg-[#1c1f26] border border-[#22252e] rounded-[8px] overflow-hidden shadow-xl z-50">
+                          {assets.map(a => (
+                            <div
+                              key={a.id}
+                              onClick={() => { setToAssetId(a.id); setIsToDropdownOpen(false); }}
+                              className="flex items-center gap-3 p-3 hover:bg-[#22252e] cursor-pointer transition-colors"
+                            >
+                              <div className="relative size-6 rounded-full bg-white/10 overflow-hidden shrink-0">
+                                {a.logo_url && <Image src={a.logo_url} alt={a.symbol} fill className="object-cover" />}
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-white text-sm font-semibold leading-tight">{a.name} ({a.symbol})</span>
+                                <span className="text-[#888c99] text-[10px] uppercase font-medium">{a.network}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-
-              {/* SWAP ICON BUTTON */}
-              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
-                <button
-                  type="button"
-                  onClick={handleSwapClick}
-                  className="size-10 rounded-xl bg-[#22252e] border-4 border-[#13151a] hover:bg-[#2c303b] text-white flex items-center justify-center transition-transform hover:rotate-180 duration-300"
-                >
-                  <Icon icon="hugeicons:arrow-up-down" className="size-5" />
-                </button>
-              </div>
-
-              {/* TO BOX */}
-              <div className={`bg-[#1c1f26] border border-[#22252e] hover:border-[#3a3f4e] transition-colors rounded-2xl p-4 flex flex-col gap-3 relative ${isToDropdownOpen ? 'z-40' : 'z-10'}`}>
-                <div className="flex justify-between items-center text-[#888c99] text-[13px] font-semibold">
-                  <span>Receive (Estimated)</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="text"
-                    readOnly
-                    value={amount ? estimatedReceive : ''}
-                    placeholder="0.00"
-                    className="w-full bg-transparent text-[28px] font-medium text-white placeholder-[#3a3f4e] outline-none cursor-not-allowed opacity-80"
-                  />
-
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => { setIsToDropdownOpen(!isToDropdownOpen); setIsFromDropdownOpen(false); }}
-                      className="flex items-center justify-between gap-2 bg-[#22252e] hover:bg-[#2c303b] transition-colors rounded-full py-1.5 pl-1.5 pr-3 shrink-0 min-w-[160px]"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="relative size-7 rounded-full bg-white/10 overflow-hidden flex items-center justify-center shrink-0">
-                          {toAsset?.logo_url ? (
-                            <Image src={toAsset.logo_url} alt={toAsset.symbol} fill className="object-cover" />
-                          ) : (
-                            <span className="text-white text-[10px] font-bold">{toAsset?.symbol[0]}</span>
-                          )}
-                        </div>
-                        <span className="text-white font-semibold text-sm truncate max-w-[90px] text-left">{toAsset?.name}</span>
-                      </div>
-                      <Icon icon="hugeicons:arrow-down-01" className="size-4 text-[#888c99] shrink-0" />
-                    </button>
-
-                    {isToDropdownOpen && (
-                      <div className="absolute right-0 top-12 w-64 bg-[#1c1f26] border border-[#22252e] rounded-xl overflow-hidden shadow-xl z-50">
-                        {assets.map(a => (
-                          <div
-                            key={a.id}
-                            onClick={() => { setToAssetId(a.id); setIsToDropdownOpen(false); }}
-                            className="flex items-center gap-3 p-3 hover:bg-[#22252e] cursor-pointer transition-colors"
-                          >
-                            <div className="relative size-6 rounded-full bg-white/10 overflow-hidden shrink-0">
-                              {a.logo_url && <Image src={a.logo_url} alt={a.symbol} fill className="object-cover" />}
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="text-white text-sm font-semibold leading-tight">{a.name} ({a.symbol})</span>
-                              <span className="text-[#888c99] text-[10px] uppercase font-medium">{a.network}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
               <button
                 type="submit"
                 disabled={isSwapping || !amount || parseFloat(amount) <= 0 || fromAssetId === toAssetId}
-                className="w-full h-14 mt-4 bg-blue-600 hover:bg-blue-500 disabled:bg-[#22252e] disabled:text-[#888c99] text-white font-semibold text-[16px] rounded-2xl transition-colors flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 disabled:shadow-none"
+                className="w-full h-14 bg-blue-600 hover:bg-blue-500 disabled:bg-[#22252e] disabled:text-[#888c99] text-white font-semibold text-[16px] rounded-[8px] transition-colors flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 disabled:shadow-none"
               >
                 {isSwapping ? (
                   <><Icon icon="hugeicons:loading-03" className="size-5 animate-spin" /> Swapping...</>

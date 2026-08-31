@@ -271,9 +271,9 @@ export default function DeveloperPage() {
     if (!newKeys) return null;
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-        <div className="w-full max-w-[520px] bg-[#13151a] border border-[#22252e] rounded-[24px] p-8 shadow-2xl flex flex-col gap-6">
+        <div className="w-full max-w-[520px] bg-[#13151a] rounded-[8px] p-8 shadow-2xl flex flex-col gap-6">
           <div className="flex items-center gap-3">
-            <div className="size-12 rounded-2xl bg-amber-500/10 flex items-center justify-center">
+            <div className="size-12 rounded-[8px] bg-amber-500/10 flex items-center justify-center">
               <Icon icon="hugeicons:alert-02" className="size-6 text-amber-400" />
             </div>
             <div>
@@ -286,12 +286,12 @@ export default function DeveloperPage() {
             <div className="flex flex-col gap-2">
               <label className="text-xs font-semibold text-[#888c99] uppercase tracking-wider">Secret Key</label>
               <div className="flex items-center gap-2">
-                <code className="flex-1 px-4 py-3 bg-[#1c1f26] border border-[#22252e] rounded-xl text-sm text-red-300 font-mono truncate">
+                <code className="flex-1 px-4 py-3 bg-[#1c1f26] rounded-[8px] text-sm text-red-300 font-mono truncate">
                   {newKeys.secret_key}
                 </code>
                 <button
                   onClick={() => copyToClipboard(newKeys.secret_key, 'sk')}
-                  className="size-10 shrink-0 bg-[#1c1f26] hover:bg-[#22252e] border border-[#22252e] rounded-xl flex items-center justify-center transition-colors"
+                  className="size-10 shrink-0 bg-[#1c1f26] hover:bg-[#22252e] border border-[#22252e] rounded-[8px] flex items-center justify-center transition-colors"
                 >
                   <Icon icon={copiedField === 'sk' ? 'hugeicons:checkmark-circle-02' : 'hugeicons:copy-01'} className="size-4 text-white" />
                 </button>
@@ -302,12 +302,12 @@ export default function DeveloperPage() {
             <div className="flex flex-col gap-2">
               <label className="text-xs font-semibold text-[#888c99] uppercase tracking-wider">Publishable Key</label>
               <div className="flex items-center gap-2">
-                <code className="flex-1 px-4 py-3 bg-[#1c1f26] border border-[#22252e] rounded-xl text-sm text-emerald-300 font-mono truncate">
+                <code className="flex-1 px-4 py-3 bg-[#1c1f26] rounded-[8px] text-sm text-emerald-300 font-mono truncate">
                   {newKeys.publishable_key}
                 </code>
                 <button
                   onClick={() => copyToClipboard(newKeys.publishable_key, 'pk')}
-                  className="size-10 shrink-0 bg-[#1c1f26] hover:bg-[#22252e] border border-[#22252e] rounded-xl flex items-center justify-center transition-colors"
+                  className="size-10 shrink-0 bg-[#1c1f26] hover:bg-[#22252e] border border-[#22252e] rounded-[8px] flex items-center justify-center transition-colors"
                 >
                   <Icon icon={copiedField === 'pk' ? 'hugeicons:checkmark-circle-02' : 'hugeicons:copy-01'} className="size-4 text-white" />
                 </button>
@@ -318,7 +318,7 @@ export default function DeveloperPage() {
 
           <button
             onClick={() => setNewKeys(null)}
-            className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors shadow-lg shadow-blue-600/20"
+            className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-[8px] transition-colors shadow-lg shadow-blue-600/20"
           >
             I've saved my keys
           </button>
@@ -332,9 +332,9 @@ export default function DeveloperPage() {
     if (!newWebhookSecret) return null;
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-        <div className="w-full max-w-[480px] bg-[#13151a] border border-[#22252e] rounded-[24px] p-8 shadow-2xl flex flex-col gap-6">
+        <div className="w-full max-w-[480px] bg-[#13151a] rounded-[8px] p-8 shadow-2xl flex flex-col gap-6">
           <div className="flex items-center gap-3">
-            <div className="size-12 rounded-2xl bg-amber-500/10 flex items-center justify-center">
+            <div className="size-12 rounded-[8px] bg-amber-500/10 flex items-center justify-center">
               <Icon icon="hugeicons:key-01" className="size-6 text-amber-400" />
             </div>
             <div>
@@ -343,12 +343,12 @@ export default function DeveloperPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <code className="flex-1 px-4 py-3 bg-[#1c1f26] border border-[#22252e] rounded-xl text-sm text-amber-300 font-mono truncate">
+            <code className="flex-1 px-4 py-3 bg-[#1c1f26] rounded-[8px] text-sm text-amber-300 font-mono truncate">
               {newWebhookSecret}
             </code>
             <button
               onClick={() => copyToClipboard(newWebhookSecret, 'wh')}
-              className="size-10 shrink-0 bg-[#1c1f26] hover:bg-[#22252e] border border-[#22252e] rounded-xl flex items-center justify-center transition-colors"
+              className="size-10 shrink-0 bg-[#1c1f26] hover:bg-[#22252e] border border-[#22252e] rounded-[8px] flex items-center justify-center transition-colors"
             >
               <Icon icon={copiedField === 'wh' ? 'hugeicons:checkmark-circle-02' : 'hugeicons:copy-01'} className="size-4 text-white" />
             </button>
@@ -369,7 +369,7 @@ export default function DeveloperPage() {
     if (!showCreateForm) return null;
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 animate-in fade-in duration-200">
-        <div className="w-full max-w-[480px] bg-[#13151a] border border-[#22252e] rounded-[24px] p-6 sm:p-8 shadow-2xl flex flex-col gap-6">
+        <div className="w-full max-w-[480px] bg-[#13151a] rounded-[8px] p-6 sm:p-8 shadow-2xl flex flex-col gap-6">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-bold text-white">Create Application</h2>
@@ -385,7 +385,7 @@ export default function DeveloperPage() {
               value={newAppName}
               onChange={(e) => setNewAppName(e.target.value)}
               placeholder="Application name (e.g. My Crypto Shop)"
-              className="w-full px-4 py-3 bg-[#1c1f26] border border-[#22252e] rounded-xl text-white text-sm placeholder:text-[#888c99] focus:outline-none focus:border-blue-500 transition-colors"
+              className="w-full px-4 py-3 bg-[#1c1f26] rounded-[8px] text-white text-sm placeholder:text-[#888c99] focus:outline-none focus:border-blue-500 transition-colors"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleCreateApp();
               }}
@@ -393,14 +393,14 @@ export default function DeveloperPage() {
             <div className="flex gap-3 mt-2">
               <button
                 onClick={() => setShowCreateForm(false)}
-                className="flex-1 py-3 bg-[#1c1f26] hover:bg-[#22252e] text-white font-semibold rounded-xl transition-colors border border-[#22252e]"
+                className="flex-1 py-3 bg-[#1c1f26] hover:bg-[#22252e] text-white font-semibold rounded-[8px] transition-colors border border-[#22252e]"
               >
                 Cancel
               </button>
               <button
                 onClick={handleCreateApp}
                 disabled={creating || !newAppName.trim()}
-                className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-[#22252e] disabled:text-[#888c99] text-white font-semibold rounded-xl transition-colors"
+                className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-[#22252e] disabled:text-[#888c99] text-white font-semibold rounded-[8px] transition-colors"
               >
                 {creating ? 'Creating...' : 'Create App'}
               </button>
@@ -416,10 +416,10 @@ export default function DeveloperPage() {
     if (!showRegenerateModal) return null;
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 animate-in fade-in duration-200">
-        <div className="w-full max-w-[480px] bg-[#13151a] border border-[#22252e] rounded-[24px] p-6 sm:p-8 shadow-2xl flex flex-col gap-6">
+        <div className="w-full max-w-[480px] bg-[#13151a] rounded-[8px] p-6 sm:p-8 shadow-2xl flex flex-col gap-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="size-12 rounded-2xl bg-amber-500/10 flex items-center justify-center">
+              <div className="size-12 rounded-[8px] bg-amber-500/10 flex items-center justify-center">
                 <Icon icon="hugeicons:alert-02" className="size-6 text-amber-400" />
               </div>
               <div>
@@ -438,14 +438,14 @@ export default function DeveloperPage() {
           <div className="flex gap-3 mt-2">
             <button
               onClick={() => setShowRegenerateModal(false)}
-              className="flex-1 py-3 bg-[#1c1f26] hover:bg-[#22252e] text-white font-semibold rounded-xl transition-colors border border-[#22252e]"
+              className="flex-1 py-3 bg-[#1c1f26] hover:bg-[#22252e] text-white font-semibold rounded-[8px] transition-colors border border-[#22252e]"
             >
               Cancel
             </button>
             <button
               onClick={confirmRegenerateKeys}
               disabled={regenerating}
-              className="flex-1 py-3 bg-amber-600 hover:bg-amber-500 disabled:bg-[#22252e] disabled:text-[#888c99] text-white font-semibold rounded-xl transition-colors"
+              className="flex-1 py-3 bg-amber-600 hover:bg-amber-500 disabled:bg-[#22252e] disabled:text-[#888c99] text-white font-semibold rounded-[8px] transition-colors"
             >
               {regenerating ? 'Regenerating...' : 'Yes, Regenerate'}
             </button>
@@ -460,7 +460,7 @@ export default function DeveloperPage() {
     if (!showWebhookForm) return null;
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 animate-in fade-in duration-200">
-        <div className="w-full max-w-[520px] bg-[#13151a] border border-[#22252e] rounded-[24px] p-6 sm:p-8 shadow-2xl flex flex-col gap-6">
+        <div className="w-full max-w-[520px] bg-[#13151a] rounded-[8px] p-6 sm:p-8 shadow-2xl flex flex-col gap-6">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-bold text-white">Add Webhook</h2>
@@ -478,7 +478,7 @@ export default function DeveloperPage() {
                 value={webhookUrl}
                 onChange={(e) => setWebhookUrl(e.target.value)}
                 placeholder="https://your-app.com/webhook"
-                className="w-full px-4 py-3 bg-[#1c1f26] border border-[#22252e] rounded-xl text-white text-sm placeholder:text-[#888c99] focus:outline-none focus:border-blue-500 transition-colors"
+                className="w-full px-4 py-3 bg-[#1c1f26] rounded-[8px] text-white text-sm placeholder:text-[#888c99] focus:outline-none focus:border-blue-500 transition-colors"
               />
             </div>
             <div>
@@ -488,9 +488,9 @@ export default function DeveloperPage() {
                   <button
                     key={event}
                     onClick={() => toggleWebhookEvent(event)}
-                    className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors border ${webhookEvents.includes(event)
-                        ? 'bg-blue-600/20 text-blue-400 border-blue-500/30'
-                        : 'bg-[#1c1f26] text-[#888c99] border-[#22252e] hover:text-white'
+                    className={`px-3 py-2 rounded-[8px] text-xs font-semibold transition-colors border ${webhookEvents.includes(event)
+                      ? 'bg-blue-600/20 text-blue-400 border-blue-500/30'
+                      : 'bg-[#1c1f26] text-[#888c99] border-[#22252e] hover:text-white'
                       }`}
                   >
                     {event}
@@ -523,14 +523,14 @@ export default function DeveloperPage() {
   const renderApps = () => (
     <div className="flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-300">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-white">Your Applications</h2>
           <p className="text-sm text-[#888c99] mt-1">Create apps to get API keys for integration.</p>
         </div>
         <button
           onClick={() => setShowCreateForm(!showCreateForm)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl transition-colors shadow-lg shadow-blue-600/20"
+          className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-[8px] transition-colors shadow-lg shadow-blue-600/20"
         >
           <Icon icon="hugeicons:add-circle-half-dot" className="size-4" />
           New App
@@ -539,8 +539,8 @@ export default function DeveloperPage() {
 
       {/* Apps Grid */}
       {apps.length === 0 ? (
-        <div className="p-12 bg-[#1c1f26] border border-[#22252e] rounded-2xl flex flex-col items-center justify-center gap-4 text-center">
-          <div className="size-16 rounded-2xl bg-blue-600/10 flex items-center justify-center">
+        <div className="p-12 bg-[#1c1f26] rounded-[8px] flex flex-col items-center justify-center gap-4 text-center">
+          <div className="size-16 rounded-[8px] bg-blue-600/10 flex items-center justify-center">
             <Icon icon="hugeicons:api" className="size-8 text-blue-400" />
           </div>
           <div>
@@ -553,11 +553,11 @@ export default function DeveloperPage() {
           {apps.map(app => (
             <div
               key={app.id}
-              className="p-5 bg-[#1c1f26] border border-[#22252e] rounded-2xl flex flex-col gap-3 hover:border-blue-500/30 transition-colors group relative"
+              className="p-5 bg-[#1c1f26] rounded-[8px] flex flex-col gap-3 hover:border-blue-500/30 transition-colors group relative"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-xl bg-blue-600/10 flex items-center justify-center">
+                  <div className="size-10 rounded-[8px] bg-blue-600/10 flex items-center justify-center">
                     <Icon icon="hugeicons:code" className="size-5 text-blue-400" />
                   </div>
                   <div>
@@ -583,7 +583,7 @@ export default function DeveloperPage() {
                         className="fixed inset-0 z-40" 
                         onClick={(e) => { e.stopPropagation(); setOpenDropdownId(null); }} 
                       />
-                      <div className="absolute right-0 mt-2 w-36 bg-[#1c1f26] border border-[#22252e] rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                      <div className="absolute right-0 mt-2 w-36 bg-[#1c1f26] rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -612,7 +612,7 @@ export default function DeveloperPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${app.is_live
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-[8px] text-[10px] font-bold uppercase tracking-wider ${app.is_live
                     ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                     : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                   }`}>
@@ -633,11 +633,11 @@ export default function DeveloperPage() {
     return (
       <div className="flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-300">
         {/* Back + Title + Toggle */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <button
               onClick={() => { setActiveTab('apps'); setSelectedApp(null); }}
-              className="size-10 rounded-xl bg-[#1c1f26] border border-[#22252e] flex items-center justify-center hover:bg-[#22252e] transition-colors"
+              className="size-10 rounded-[8px] bg-[#1c1f26] flex items-center justify-center hover:bg-[#22252e] transition-colors"
             >
               <Icon icon="hugeicons:arrow-left-01" className="size-5 text-white" />
             </button>
@@ -653,9 +653,9 @@ export default function DeveloperPage() {
             </span>
             <button
               onClick={() => handleToggleLiveStatus(selectedApp)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${selectedApp.is_live ? 'bg-emerald-500' : 'bg-[#22252e]'}`}
+              className={`relative inline-flex h-6 w-11 items-center rounded-[8px] transition-colors focus:outline-none ${selectedApp.is_live ? 'bg-emerald-500' : 'bg-[#22252e]'}`}
             >
-              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${selectedApp.is_live ? 'translate-x-6' : 'translate-x-1'}`} />
+              <span className={`inline-block h-4 w-4 transform rounded-[8px] bg-white transition-transform ${selectedApp.is_live ? 'translate-x-6' : 'translate-x-1'}`} />
             </button>
           </div>
         </div>
@@ -685,11 +685,11 @@ export default function DeveloperPage() {
         {/* Keys Tab */}
         {detailTab === 'keys' && (
           <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <p className="text-sm text-[#888c99]">API keys for this application</p>
               <button
                 onClick={handleRegenerateKeys}
-                className="flex items-center gap-2 px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-sm font-semibold rounded-xl transition-colors border border-amber-500/20"
+                className="flex items-center gap-2 px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-sm font-semibold rounded-[8px] transition-colors border border-amber-500/20"
               >
                 <Icon icon="hugeicons:refresh" className="size-4" />
                 Regenerate
@@ -697,14 +697,14 @@ export default function DeveloperPage() {
             </div>
 
             {keys.length === 0 ? (
-              <div className="p-8 bg-[#1c1f26] border border-[#22252e] rounded-2xl text-center text-[#888c99]">
+              <div className="p-8 bg-[#1c1f26] rounded-[8px] text-center text-[#888c99]">
                 No keys found. Click Regenerate to create new ones.
               </div>
             ) : (
               <div className="flex flex-col gap-3">
                 {keys.map(key => (
-                  <div key={key.id} className="p-4 bg-[#1c1f26] border border-[#22252e] rounded-2xl flex items-start justify-between">
-                    <div className="flex items-start gap-4">
+                  <div key={key.id} className="p-4 bg-[#1c1f26] rounded-[8px] flex flex-col sm:flex-row items-start justify-between gap-4">
+                    <div className="flex items-start gap-4 overflow-hidden w-full">
                       <div className={`size-10 rounded-xl flex items-center justify-center shrink-0 ${key.is_active ? 'bg-blue-600/10' : 'bg-red-500/10'
                         }`}>
                         <Icon
@@ -722,16 +722,16 @@ export default function DeveloperPage() {
                             {key.is_active ? 'Active' : 'Revoked'}
                           </span>
                         </div>
-                        <div className="flex flex-col gap-1 mt-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold text-[#888c99] w-24">Secret:</span>
-                            <span className="text-sm text-red-300/80 font-mono">
+                        <div className="flex flex-col gap-1 mt-1 w-full max-w-full">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                            <span className="text-xs font-semibold text-[#888c99] sm:w-24 shrink-0">Secret:</span>
+                            <span className="text-sm text-red-300/80 font-mono break-all">
                               sk_{selectedApp?.is_live ? 'live' : 'test'}_••••••••{key.secret_hint}
                             </span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold text-[#888c99] w-24">Publishable:</span>
-                            <span className="text-sm text-emerald-300/80 font-mono">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                            <span className="text-xs font-semibold text-[#888c99] sm:w-24 shrink-0">Publishable:</span>
+                            <span className="text-sm text-emerald-300/80 font-mono break-all">
                               pk_{selectedApp?.is_live ? 'live' : 'test'}_••••••••{key.publishable_hint}
                             </span>
                           </div>
@@ -746,7 +746,7 @@ export default function DeveloperPage() {
                     {key.is_active && (
                       <button
                         onClick={() => handleRevokeKey(key.id)}
-                        className="px-3 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-500/10 rounded-lg transition-colors border border-transparent hover:border-red-500/20"
+                        className="px-3 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-500/10 rounded-[8px] transition-colors border border-transparent hover:border-red-500/20"
                       >
                         Revoke Pair
                       </button>
@@ -762,12 +762,12 @@ export default function DeveloperPage() {
         {detailTab === 'logs' && (
           <div className="flex flex-col gap-4">
             {logs.length === 0 ? (
-              <div className="p-8 bg-[#1c1f26] border border-[#22252e] rounded-2xl text-center text-[#888c99]">
+              <div className="p-8 bg-[#1c1f26] rounded-[8px] text-center text-[#888c99]">
                 No API requests logged yet.
               </div>
             ) : (
               <>
-                <div className="w-full overflow-x-auto rounded-xl border border-[#22252e]">
+                <div className="w-full overflow-x-auto rounded-[8px] border border-[#22252e]">
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-[#1c1f26] border-b border-[#22252e]">
@@ -807,7 +807,7 @@ export default function DeveloperPage() {
                     <button
                       onClick={() => loadLogs(selectedApp.id, logsPage - 1)}
                       disabled={logsPage <= 1}
-                      className="px-4 py-2 text-sm bg-[#1c1f26] border border-[#22252e] rounded-xl disabled:opacity-50 text-white hover:bg-[#22252e] transition-colors"
+                      className="px-4 py-2 text-sm bg-[#1c1f26] rounded-[8px] disabled:opacity-50 text-white hover:bg-[#22252e] transition-colors"
                     >
                       Previous
                     </button>
@@ -815,7 +815,7 @@ export default function DeveloperPage() {
                     <button
                       onClick={() => loadLogs(selectedApp.id, logsPage + 1)}
                       disabled={logsPage * 50 >= logsTotal}
-                      className="px-4 py-2 text-sm bg-[#1c1f26] border border-[#22252e] rounded-xl disabled:opacity-50 text-white hover:bg-[#22252e] transition-colors"
+                      className="px-4 py-2 text-sm bg-[#1c1f26] rounded-[8px] disabled:opacity-50 text-white hover:bg-[#22252e] transition-colors"
                     >
                       Next
                     </button>
@@ -829,11 +829,11 @@ export default function DeveloperPage() {
         {/* Webhooks Tab */}
         {detailTab === 'webhooks' && (
           <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <p className="text-sm text-[#888c99]">Receive real-time notifications for events.</p>
               <button
                 onClick={() => setShowWebhookForm(!showWebhookForm)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-[8px] transition-colors"
               >
                 <Icon icon="hugeicons:add-circle-half-dot" className="size-4" />
                 Add Webhook
@@ -841,19 +841,19 @@ export default function DeveloperPage() {
             </div>
 
             {webhooks.length === 0 ? (
-              <div className="p-8 bg-[#1c1f26] border border-[#22252e] rounded-2xl text-center text-[#888c99]">
+              <div className="p-8 bg-[#1c1f26] rounded-[8px] text-center text-[#888c99]">
                 No webhooks registered yet.
               </div>
             ) : (
               <div className="flex flex-col gap-3">
                 {webhooks.map(wh => (
-                  <div key={wh.id} className="p-4 bg-[#1c1f26] border border-[#22252e] rounded-2xl flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="size-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                  <div key={wh.id} className="p-4 bg-[#1c1f26] rounded-[8px] flex items-start sm:items-center justify-between gap-4">
+                    <div className="flex items-start sm:items-center gap-3 overflow-hidden">
+                      <div className="size-10 rounded-xl bg-purple-500/10 flex items-center justify-center shrink-0">
                         <Icon icon="hugeicons:notification-03" className="size-5 text-purple-400" />
                       </div>
-                      <div className="flex flex-col gap-1">
-                        <span className="text-sm text-white font-mono truncate max-w-[300px]">{wh.url}</span>
+                      <div className="flex flex-col gap-1 overflow-hidden">
+                        <span className="text-sm text-white font-mono break-all sm:truncate max-w-[200px] sm:max-w-[400px]">{wh.url}</span>
                         <div className="flex flex-wrap gap-1">
                           {wh.events.map(e => (
                             <span key={e} className="px-1.5 py-0.5 bg-[#13151a] text-[#888c99] text-[10px] rounded border border-[#22252e]">{e}</span>
@@ -886,9 +886,9 @@ export default function DeveloperPage() {
       {renderRegenerateModal()}
 
       {/* Page Header */}
-      <div className="w-full bg-[#13151a] border border-[#22252e] rounded-[24px] p-8 shadow-2xl relative overflow-hidden">
+      <div className="w-full bg-[#13151a] rounded-[8px] p-8 shadow-2xl relative overflow-hidden">
         <div className="relative z-10 flex items-center gap-4">
-          <div className="size-14 rounded-2xl bg-gradient-to-br from-blue-600  flex items-center justify-center ">
+          <div className="size-14 rounded-[8px] bg-gradient-to-br from-blue-600  flex items-center justify-center ">
             <Icon icon="hugeicons:api" className="size-7 text-white" />
           </div>
           <div>
@@ -899,7 +899,7 @@ export default function DeveloperPage() {
       </div>
 
       {/* Content */}
-      <div className="w-full bg-[#13151a] border border-[#22252e] rounded-[24px] p-6 sm:p-8 shadow-xl">
+      <div className="w-full bg-[#13151a] rounded-[8px] p-6 sm:p-8 shadow-xl">
         {activeTab === 'apps' && renderApps()}
         {activeTab === 'detail' && renderDetail()}
       </div>

@@ -16,16 +16,25 @@ func RequireAuth(jwtSecret string) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			authHeader := c.Request().Header.Get("Authorization")
-			if authHeader == "" {
-				return echo.NewHTTPError(http.StatusUnauthorized, "Missing Authorization header")
+			var tokenString string
+
+			if authHeader != "" {
+				parts := strings.Split(authHeader, " ")
+				if len(parts) == 2 && strings.ToLower(parts[0]) == "bearer" {
+					tokenString = parts[1]
+				}
 			}
 
-			parts := strings.Split(authHeader, " ")
-			if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-				return echo.NewHTTPError(http.StatusUnauthorized, "Invalid Authorization header format")
+			// If not in header, try cookie
+			if tokenString == "" {
+				if cookie, err := c.Cookie("access_token"); err == nil {
+					tokenString = cookie.Value
+				}
 			}
 
-			tokenString := parts[1]
+			if tokenString == "" {
+				return echo.NewHTTPError(http.StatusUnauthorized, "Missing Authorization token")
+			}
 			token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 					return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])

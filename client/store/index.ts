@@ -1,11 +1,21 @@
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore, combineReducers, AnyAction } from '@reduxjs/toolkit';
 import authReducer from './authSlice';
 
-export const store = configureStore({
-  reducer: {
-    auth: authReducer,
-  },
+const appReducer = combineReducers({
+  auth: authReducer,
 });
 
-export type RootState = ReturnType<typeof store.getState>;
+const rootReducer = (state: any, action: AnyAction) => {
+  if (action.type === 'auth/logout') {
+    // Reset the entire state to undefined so that reducers revert to initial state
+    state = undefined;
+  }
+  return appReducer(state, action);
+};
+
+export const store = configureStore({
+  reducer: rootReducer,
+});
+
+export type RootState = ReturnType<typeof appReducer>;
 export type AppDispatch = typeof store.dispatch;

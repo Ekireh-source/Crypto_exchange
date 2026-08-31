@@ -12,7 +12,7 @@ interface QuickActionItem {
   onClick: () => void;
 }
 
-export default function QuickActions() {
+export default function QuickActions({ onActionComplete }: { onActionComplete?: () => void }) {
   const [isSendOpen, setIsSendOpen] = useState(false);
   const [isReceiveOpen, setIsReceiveOpen] = useState(false);
 
@@ -34,7 +34,7 @@ export default function QuickActions() {
 
   return (
     <>
-      <div className="w-full bg-[#0a0b0d] border border-[#22252e] rounded-[20px] p-3 flex flex-col gap-1 font-sans">
+      <div className="w-full bg-[#0a0b0d] rounded-[8px] p-3 flex flex-col gap-1 font-sans">
         {actions.map((action) => (
           <div
             key={action.id}
@@ -52,7 +52,7 @@ export default function QuickActions() {
       </div>
 
       {/* Modals */}
-      <SendModal isOpen={isSendOpen} onClose={() => setIsSendOpen(false)} />
+      <SendModal isOpen={isSendOpen} onClose={() => setIsSendOpen(false)} onSuccess={onActionComplete} />
       <ReceiveModal isOpen={isReceiveOpen} onClose={() => setIsReceiveOpen(false)} />
     </>
   );

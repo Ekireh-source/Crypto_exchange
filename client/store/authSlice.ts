@@ -10,15 +10,12 @@ interface User {
 
 interface AuthState {
   user: User | null;
-  accessToken: string | null;
-  refreshToken: string | null;
   isAuthenticated: boolean;
 }
 
-// Load initial state from localStorage if available (only on client side)
 const loadInitialState = (): AuthState => {
   if (typeof window === 'undefined') {
-    return { user: null, accessToken: null, refreshToken: null, isAuthenticated: false };
+    return { user: null, isAuthenticated: false };
   }
   
   try {
@@ -26,15 +23,15 @@ const loadInitialState = (): AuthState => {
     if (authData) {
       const parsed = JSON.parse(authData);
       return {
-        ...parsed,
-        isAuthenticated: !!parsed.accessToken,
+        user: parsed.user,
+        isAuthenticated: !!parsed.user,
       };
     }
   } catch (e) {
     console.error('Failed to parse auth data from local storage', e);
   }
   
-  return { user: null, accessToken: null, refreshToken: null, isAuthenticated: false };
+  return { user: null, isAuthenticated: false };
 };
 
 const initialState: AuthState = loadInitialState();
@@ -45,11 +42,9 @@ export const authSlice = createSlice({
   reducers: {
     setCredentials: (
       state,
-      action: PayloadAction<{ user: User; accessToken: string; refreshToken: string }>
+      action: PayloadAction<{ user: User }>
     ) => {
       state.user = action.payload.user;
-      state.accessToken = action.payload.accessToken;
-      state.refreshToken = action.payload.refreshToken;
       state.isAuthenticated = true;
 
       if (typeof window !== 'undefined') {
@@ -57,32 +52,12 @@ export const authSlice = createSlice({
           'auth_data',
           JSON.stringify({
             user: state.user,
-            accessToken: state.accessToken,
-            refreshToken: state.refreshToken,
-          })
-        );
-      }
-    },
-    setTokens: (state, action: PayloadAction<{ accessToken: string; refreshToken: string }>) => {
-      state.accessToken = action.payload.accessToken;
-      state.refreshToken = action.payload.refreshToken;
-      
-      if (typeof window !== 'undefined') {
-        const currentData = JSON.parse(localStorage.getItem('auth_data') || '{}');
-        localStorage.setItem(
-          'auth_data',
-          JSON.stringify({
-            ...currentData,
-            accessToken: state.accessToken,
-            refreshToken: state.refreshToken,
           })
         );
       }
     },
     logout: (state) => {
       state.user = null;
-      state.accessToken = null;
-      state.refreshToken = null;
       state.isAuthenticated = false;
       
       if (typeof window !== 'undefined') {
@@ -92,7 +67,7 @@ export const authSlice = createSlice({
   },
 });
 
-export const { setCredentials, setTokens, logout } = authSlice.actions;
+export const { setCredentials, logout } = authSlice.actions;
 
 export const selectUser = (state: RootState) => state.auth.user;
 

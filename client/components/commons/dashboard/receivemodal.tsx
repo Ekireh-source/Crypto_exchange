@@ -55,11 +55,31 @@ export default function ReceiveModal({ isOpen, onClose }: ReceiveModalProps) {
     loadDepositAddress();
   }, [selectedAsset, isOpen]);
 
-  const handleCopy = () => {
+  const handleCopy = async () => {
     if (!depositData?.address) return;
-    navigator.clipboard.writeText(depositData.address);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(depositData.address);
+      } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = depositData.address;
+        textArea.style.position = 'absolute';
+        textArea.style.left = '-999999px';
+        document.body.prepend(textArea);
+        textArea.select();
+        try {
+          document.execCommand('copy');
+        } catch (error) {
+          console.error('Fallback copy failed', error);
+        } finally {
+          textArea.remove();
+        }
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
   };
 
   if (!isOpen) return null;

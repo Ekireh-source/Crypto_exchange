@@ -95,7 +95,7 @@ export default function TradeRoom() {
   const statusInfo = getStatusDisplay();
 
   return (
-    <div className="flex flex-col flex-1 h-full max-w-[1440px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 gap-8 overflow-y-auto">
+    <div className="flex flex-col w-full animate-in fade-in duration-500 pb-20 gap-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -110,7 +110,7 @@ export default function TradeRoom() {
             <p className="text-sm text-[#888c99]">You are the {isBuyer ? "Buyer" : "Seller"}</p>
           </div>
         </div>
-        <div className={`flex items-center gap-2 px-4 py-2 rounded-xl border ${statusInfo.bg}`}>
+        <div className={`flex items-center gap-2 px-4 py-2 rounded-[8px] border ${statusInfo.bg}`}>
           <Icon icon={statusInfo.icon} className={`size-5 ${statusInfo.color}`} />
           <span className={`text-sm font-bold ${statusInfo.color}`}>{statusInfo.text}</span>
         </div>
@@ -119,7 +119,7 @@ export default function TradeRoom() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
         {/* Trade Details Panel */}
-        <div className="bg-[#13151a] rounded-2xl border border-[#22252e] p-6 flex flex-col gap-6 h-fit">
+        <div className="bg-[#13151a] rounded-[6px] p-6 flex flex-col gap-6 h-fit">
           <h2 className="text-lg font-bold text-white border-b border-[#22252e] pb-4">Trade Summary</h2>
           
           <div className="flex flex-col gap-4">
@@ -142,7 +142,7 @@ export default function TradeRoom() {
           </div>
 
           {trade.escrow_locked && (
-            <div className="mt-2 p-3 bg-blue-600/10 rounded-xl border border-blue-500/20 flex items-start gap-3">
+            <div className="mt-2 p-3 bg-blue-600/10 rounded-[8px] border border-blue-500/20 flex items-start gap-3">
               <Icon icon="hugeicons:lock-key" className="size-5 text-blue-400 shrink-0 mt-0.5" />
               <p className="text-sm text-blue-400">Crypto is securely locked in escrow. It will be released when the seller confirms payment.</p>
             </div>
@@ -150,7 +150,7 @@ export default function TradeRoom() {
         </div>
 
         {/* Action Panel */}
-        <div className="bg-[#13151a] rounded-2xl border border-[#22252e] p-6 flex flex-col gap-6">
+        <div className="bg-[#13151a] rounded-[6px] p-6 flex flex-col gap-6">
           <h2 className="text-lg font-bold text-white border-b border-[#22252e] pb-4">Action Required</h2>
           
           {isBuyer ? (
@@ -165,14 +165,14 @@ export default function TradeRoom() {
                     <button
                       onClick={() => handleAction("pay")}
                       disabled={actionLoading}
-                      className="w-full py-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-600/20 flex justify-center items-center gap-2"
+                      className="w-full py-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold rounded-[8px] transition-all shadow-lg shadow-blue-600/20 flex justify-center items-center gap-2"
                     >
                       {actionLoading ? <Icon icon="svg-spinners:180-ring" className="size-5" /> : "I Have Paid"}
                     </button>
                     <button
                       onClick={() => handleAction("cancel")}
                       disabled={actionLoading}
-                      className="w-full py-4 bg-[#1c1f26] hover:bg-red-500/10 hover:text-red-400 text-[#888c99] font-bold rounded-xl transition-all flex justify-center items-center gap-2 border border-[#22252e] hover:border-red-500/30"
+                      className="w-full py-4 bg-[#1c1f26] hover:bg-red-500/10 hover:text-red-400 text-[#888c99] font-bold rounded-[8px] transition-all flex justify-center items-center gap-2 border border-[#22252e] hover:border-red-500/30"
                     >
                       Cancel Trade
                     </button>
@@ -223,7 +223,7 @@ export default function TradeRoom() {
                 </div>
               ) : trade.status === "paid" ? (
                 <>
-                  <div className="p-4 bg-amber-500/10 rounded-xl border border-amber-500/20 flex flex-col gap-2">
+                  <div className="p-4 bg-amber-500/10 rounded-[8px] border border-amber-500/20 flex flex-col gap-2">
                     <h4 className="font-bold text-amber-500 flex items-center gap-2">
                       <Icon icon="hugeicons:alert-02" className="size-5" />
                       Verify Payment First!
@@ -236,14 +236,14 @@ export default function TradeRoom() {
                     <button
                       onClick={() => handleAction("release")}
                       disabled={actionLoading}
-                      className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold rounded-xl transition-all shadow-lg shadow-emerald-600/20 flex justify-center items-center gap-2"
+                      className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold rounded-[8px] transition-all shadow-lg shadow-emerald-600/20 flex justify-center items-center gap-2"
                     >
                       {actionLoading ? <Icon icon="svg-spinners:180-ring" className="size-5" /> : "I Have Received Payment - Release Crypto"}
                     </button>
                     <button
                       onClick={() => handleAction("cancel")}
                       disabled={actionLoading}
-                      className="w-full py-4 bg-[#1c1f26] hover:bg-red-500/10 hover:text-red-400 text-[#888c99] font-bold rounded-xl transition-all flex justify-center items-center gap-2 border border-[#22252e] hover:border-red-500/30"
+                      className="w-full py-4 bg-[#1c1f26] hover:bg-red-500/10 hover:text-red-400 text-[#888c99] font-bold rounded-[8px] transition-all flex justify-center items-center gap-2 border border-[#22252e] hover:border-red-500/30"
                     >
                       Cancel Trade (Not Received)
                     </button>

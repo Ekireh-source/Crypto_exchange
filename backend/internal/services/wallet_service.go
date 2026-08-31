@@ -262,6 +262,57 @@ func (s *WalletService) SendCrypto(ctx context.Context, userID uuid.UUID, req Se
 		return nil, fmt.Errorf("insufficient balance. You need %v %s (including %v fee)", totalRequired, asset.Symbol, feeFloat)
 	}
 
+	// 5.5 Check for Internal Transfer
+	recvUserID, _, err := s.walletDB.GetUserByDepositAddress(ctx, req.ToAddress)
+	if err == nil {
+		internalTxHash := fmt.Sprintf("internal-%s", uuid.New().String())
+		totalDeduction := totalRequired.Text('f', 8)
+
+		// Create withdrawal record for sender
+		txOut := &models.Transaction{
+			ID:          uuid.New(),
+			UserID:      userID,
+			AssetID:     req.AssetID,
+			Type:        models.TxWithdrawal,
+			Status:      models.TxConfirmed,
+			Amount:      req.Amount,
+			Fee:         feeFloat.Text('f', 8),
+			FromAddress: nil,
+			ToAddress:   &req.ToAddress,
+			TxHash:      &internalTxHash,
+			Note:        &req.Note,
+			SweepStatus: models.SweepNotNeeded,
+			CreatedAt:   time.Now(),
+		}
+
+		if err := s.walletDB.CreateTransaction(ctx, txOut); err != nil {
+			return nil, fmt.Errorf("persisting internal withdrawal: %w", err)
+		}
+		_ = s.walletDB.DeductBalance(ctx, userID, req.AssetID, totalDeduction)
+
+		// Create deposit record for receiver
+		txIn := &models.Transaction{
+			ID:          uuid.New(),
+			UserID:      recvUserID,
+			AssetID:     req.AssetID,
+			Type:        models.TxDeposit,
+			Status:      models.TxConfirmed,
+			Amount:      req.Amount,
+			Fee:         "0",
+			FromAddress: nil,
+			ToAddress:   &req.ToAddress,
+			TxHash:      &internalTxHash,
+			Note:        &req.Note,
+			SweepStatus: models.SweepNotNeeded,
+			CreatedAt:   time.Now(),
+		}
+		_ = s.walletDB.CreateTransaction(ctx, txIn)
+		_ = s.walletDB.AddBalance(ctx, recvUserID, req.AssetID, req.Amount)
+
+		fmt.Printf("SendCrypto: processed internal transfer %s from %s to %s\n", req.Amount, userID, recvUserID)
+		return txOut, nil
+	}
+
 	// 6. Retrieve Blockchain Adapter and Hot Wallet
 	adapter, ok := s.adapters[asset.Network]
 	if !ok {

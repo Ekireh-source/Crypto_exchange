@@ -8,15 +8,17 @@ import { assetsService } from '@/feature/assets/assets.service';
 import { transferService } from '@/feature/transfer/transfer.service';
 import { type Asset } from '@/feature/assets/assets.schema';
 import { type TransactionResponse } from '@/feature/transfer/transfer.schema';
+import { toast } from 'sonner';
 
 interface SendModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
-type Step = 'form' | 'review' | 'success';
+type Step = 'form' | 'review';
 
-export default function SendModal({ isOpen, onClose }: SendModalProps) {
+export default function SendModal({ isOpen, onClose, onSuccess }: SendModalProps) {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [isAssetSelectOpen, setIsAssetSelectOpen] = useState(false);
@@ -27,8 +29,7 @@ export default function SendModal({ isOpen, onClose }: SendModalProps) {
 
   const [step, setStep] = useState<Step>('form');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [txResult, setTxResult] = useState<TransactionResponse | null>(null);
+  const [idempotencyKey, setIdempotencyKey] = useState<string>('');
 
   useEffect(() => {
     if (!isOpen) return;
@@ -51,8 +52,6 @@ export default function SendModal({ isOpen, onClose }: SendModalProps) {
     setToAddress('');
     setAmount('');
     setNote('');
-    setError(null);
-    setTxResult(null);
   };
 
   const handleClose = () => {
@@ -62,39 +61,47 @@ export default function SendModal({ isOpen, onClose }: SendModalProps) {
 
   const handleProceedToReview = (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     if (!selectedAsset) {
-      setError('Please select an asset');
+      toast.error('Please select an asset');
       return;
     }
     if (!toAddress.trim()) {
-      setError('Recipient address is required');
+      toast.error('Recipient address is required');
       return;
     }
     if (!amount.trim() || parseFloat(amount) <= 0) {
-      setError('Please enter a valid amount');
+      toast.error('Please enter a valid amount');
       return;
     }
+    
+    // Generate a unique idempotency key for this specific transaction attempt
+    const newKey = typeof crypto !== 'undefined' && crypto.randomUUID 
+      ? crypto.randomUUID() 
+      : Math.random().toString(36).substring(2) + Date.now().toString(36);
+    setIdempotencyKey(newKey);
+    
     setStep('review');
   };
 
   const handleConfirmSend = async () => {
     if (!selectedAsset) return;
     setLoading(true);
-    setError(null);
 
     try {
-      const result = await transferService.sendCrypto({
+      await transferService.sendCrypto({
         asset_id: selectedAsset.id,
         to_address: toAddress.trim(),
         amount: amount.trim(),
         note: note.trim() || undefined,
-      });
-      setTxResult(result);
-      setStep('success');
+      }, idempotencyKey);
+      toast.success(`Sent ${amount} ${selectedAsset.symbol} successfully`);
+      if (onSuccess) {
+        onSuccess();
+      }
+      handleClose();
     } catch (err: any) {
       console.error('Send failed:', err);
-      setError(err?.response?.data?.error || 'Failed to send crypto. Please try again.');
+      toast.error(err?.response?.data?.error || 'Failed to send crypto. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -113,12 +120,10 @@ export default function SendModal({ isOpen, onClose }: SendModalProps) {
               <h3 className="text-xl font-bold tracking-tight">
                 {step === 'form' && 'Send Crypto'}
                 {step === 'review' && 'Review Order'}
-                {step === 'success' && 'Transaction Sent'}
               </h3>
               <p className="text-[14px] text-[#888c99]">
                 {step === 'form' && 'Transfer funds to an external wallet'}
                 {step === 'review' && 'Confirm details before broadcasting'}
-                {step === 'success' && 'Your transfer request was submitted'}
               </p>
             </div>
             <button
@@ -128,13 +133,6 @@ export default function SendModal({ isOpen, onClose }: SendModalProps) {
               <Icon icon="hugeicons:cancel-01" className="size-5" />
             </button>
           </div>
-
-          {error && (
-            <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-medium flex items-center gap-2">
-              <Icon icon="hugeicons:alert-circle" className="size-5 shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
 
           {/* STEP 1: FORM */}
           {step === 'form' && (
@@ -290,35 +288,6 @@ export default function SendModal({ isOpen, onClose }: SendModalProps) {
                   )}
                 </button>
               </div>
-            </div>
-          )}
-
-          {/* STEP 3: SUCCESS */}
-          {step === 'success' && (
-            <div className="flex flex-col items-center justify-center gap-5 py-4">
-              <div className="size-16 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center border border-emerald-500/20">
-                <Icon icon="hugeicons:checkmark-circle-02" className="size-10" />
-              </div>
-              
-              <div className="text-center flex flex-col gap-1">
-                <h4 className="text-lg font-bold text-white">Transfer Initiated</h4>
-                <p className="text-sm text-[#888c99]">
-                  Sent <strong className="text-white">{amount} {selectedAsset?.symbol}</strong> to recipient address.
-                </p>
-              </div>
-
-              {txResult?.id && (
-                <div className="w-full p-3 bg-[#1c1f26] rounded-xl border border-[#22252e] text-xs font-mono text-[#888c99] text-center">
-                  Tx ID: {txResult.id}
-                </div>
-              )}
-
-              <button
-                onClick={handleClose}
-                className="w-full h-12 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[15px] rounded-full transition-colors"
-              >
-                Done
-              </button>
             </div>
           )}
         </div>

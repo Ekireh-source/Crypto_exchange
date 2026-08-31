@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -97,10 +98,11 @@ func (s *WebhookService) Dispatch(ctx context.Context, appID uuid.UUID, event st
 
 // deliverWebhook sends a single webhook payload with HMAC-SHA256 signature.
 func (s *WebhookService) deliverWebhook(hook models.Webhook, event string, data any) {
+	timestamp := time.Now().Unix()
 	payload := WebhookPayload{
 		Event:     event,
 		Data:      data,
-		Timestamp: time.Now().Unix(),
+		Timestamp: timestamp,
 		ID:        uuid.New().String(),
 	}
 
@@ -110,10 +112,15 @@ func (s *WebhookService) deliverWebhook(hook models.Webhook, event string, data 
 		return
 	}
 
-	// Compute HMAC-SHA256 signature
+	// Compute HMAC-SHA256 signature (Stripe style)
+	timestampStr := strconv.FormatInt(timestamp, 10)
+	signedPayload := timestampStr + "." + string(body)
+
 	mac := hmac.New(sha256.New, []byte(hook.Secret))
-	mac.Write(body)
-	signature := "sha256=" + hex.EncodeToString(mac.Sum(nil))
+	mac.Write([]byte(signedPayload))
+	signatureHex := hex.EncodeToString(mac.Sum(nil))
+
+	stripeStyleSignature := fmt.Sprintf("t=%s,v1=%s", timestampStr, signatureHex)
 
 	req, err := http.NewRequest("POST", hook.URL, bytes.NewReader(body))
 	if err != nil {
@@ -122,7 +129,7 @@ func (s *WebhookService) deliverWebhook(hook models.Webhook, event string, data 
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Exchange-Signature", signature)
+	req.Header.Set("X-Exchange-Signature", stripeStyleSignature)
 	req.Header.Set("X-Exchange-Event", event)
 	req.Header.Set("X-Exchange-Delivery", payload.ID)
 

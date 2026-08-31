@@ -76,20 +76,20 @@ export default function SwapPage() {
   };
 
   return (
-    <div className="flex flex-col w-full max-w-[1440px] mx-auto animate-in fade-in duration-500 pb-20 font-sans gap-8">
+    <div className="flex flex-col w-full animate-in fade-in duration-500 pb-20 font-sans gap-8">
       
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-row items-center justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="text-3xl font-bold text-white tracking-tight">Swaps</h1>
-          <p className="text-[15px] text-[#888c99]">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Swaps</h1>
+          <p className="hidden sm:block text-[15px] text-[#888c99]">
             Exchange tokens instantly and view your swap history
           </p>
         </div>
         
         <button
           onClick={() => setIsSwapModalOpen(true)}
-          className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-6 py-2.5 rounded-full transition-colors flex items-center gap-2 shadow-lg shadow-blue-600/20 self-start sm:self-auto"
+          className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-4 sm:px-6 py-2 sm:py-2.5 rounded-[8px] sm:rounded-full transition-colors flex items-center gap-2 shadow-lg shadow-blue-600/20"
         >
           <Icon icon="hugeicons:arrow-up-down" className="size-5" />
           <span>New Swap</span>
@@ -97,7 +97,7 @@ export default function SwapPage() {
       </div>
 
       {/* Main Container */}
-      <div className="w-full bg-[#13151a] border border-[#22252e] rounded-[24px] overflow-hidden shadow-2xl flex flex-col">
+      <div className="w-full bg-[#13151a] rounded-[6px] overflow-hidden flex flex-col">
         
         {/* Header Bar */}
         <div className="p-4 sm:p-6 border-b border-[#22252e] flex items-center justify-between bg-[#16181d]/50">
@@ -108,7 +108,7 @@ export default function SwapPage() {
         </div>
 
         {/* Transactions Table / List */}
-        <div className="w-full overflow-x-auto">
+        <div className="w-full flex flex-col">
           {loading ? (
             <div className="p-8 flex flex-col gap-4">
               {[1, 2, 3, 4, 5].map((i) => (
@@ -128,100 +128,90 @@ export default function SwapPage() {
               </div>
             </div>
           ) : (
-            <table className="w-full text-left border-collapse min-w-[700px]">
-              <thead>
-                <tr className="border-b border-[#22252e] text-[13px] font-semibold text-[#888c99] bg-[#16181d]/30">
-                  <th className="py-4 px-6">Asset</th>
-                  <th className="py-4 px-6">Amount</th>
-                  <th className="py-4 px-6">Status</th>
-                  <th className="py-4 px-6">Tx Hash</th>
-                  <th className="py-4 px-6 text-right">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#22252e]">
+            <div className="flex flex-col w-full">
+              {/* Table Header */}
+              <div className="hidden md:grid md:grid-cols-12 gap-4 p-6 border-b border-[#22252e] text-[13px] font-semibold text-[#888c99] uppercase tracking-wider bg-[#1c1f26]/30">
+                <div className="col-span-3">Asset</div>
+                <div className="col-span-3">Amount</div>
+                <div className="col-span-2">Status</div>
+                <div className="col-span-2">Tx Hash</div>
+                <div className="col-span-2 text-right">Date</div>
+              </div>
+
+              {/* Table Body */}
+              <div className="flex flex-col divide-y divide-[#22252e]">
                 {transactions.map((tx) => {
                   const asset = assetMap.get(tx.asset_id);
-                  const isDebit = tx.amount && tx.amount.toString().startsWith('-'); // Since it's a swap, one side is out, one side is in. But actually, in our new code, from is positive number in amount? Let's check: fromAmount is passed, we insert it.
-                  // Wait, earlier we just put amount. Let's rely on standard UI display.
-
                   return (
-                    <tr
+                    <div
                       key={tx.id}
                       onClick={() => router.push(`/swap/${tx.id}`)}
-                      className="hover:bg-[#1c1f26]/60 transition-colors group text-sm cursor-pointer"
+                      className="flex flex-wrap md:flex-nowrap md:grid md:grid-cols-12 justify-between items-center gap-y-4 md:gap-4 p-6 hover:bg-[#1c1f26]/60 transition-colors cursor-pointer group text-sm"
                     >
                       {/* Asset */}
-                      <td className="py-4 px-6">
-                        <div className="flex items-center gap-3.5">
-                          <div
-                            className="size-10 rounded-full flex items-center justify-center border shrink-0 bg-purple-500/10 text-purple-400 border-purple-500/20"
-                          >
-                            <Icon icon="hugeicons:arrow-data-transfer-horizontal" className="size-5" />
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="font-bold text-white capitalize leading-tight">
-                              Swap
-                            </span>
-                            <span className="text-xs text-[#888c99]">
-                              {asset ? `${asset.name} (${asset.symbol})` : `Asset #${tx.asset_id}`}
-                            </span>
-                          </div>
+                      <div className="w-1/2 md:w-auto col-span-3 flex items-center gap-3.5">
+                        <div className="size-10 rounded-full flex items-center justify-center border shrink-0 bg-sky-500/10 text-sky-400 border-sky-500/20">
+                          <Icon icon="hugeicons:arrow-data-transfer-horizontal" className="size-5" />
                         </div>
-                      </td>
+                        <div className="flex flex-col">
+                          <span className="font-bold text-white capitalize leading-tight">Swap</span>
+                          <span className="text-xs text-[#888c99]">
+                            {asset ? `${asset.name} (${asset.symbol})` : `Asset #${tx.asset_id}`}
+                          </span>
+                        </div>
+                      </div>
 
                       {/* Amount */}
-                      <td className="py-4 px-6">
-                        <div className="flex flex-col">
-                          <span className="font-mono font-bold text-white">
-                            {tx.amount} {asset?.symbol || ''}
+                      <div className="w-1/2 md:w-auto col-span-3 flex flex-col items-end md:items-start md:block">
+                        <span className="md:hidden text-[11px] text-[#888c99] mb-0.5">Amount</span>
+                        <span className="font-mono font-bold text-white block">
+                          {parseFloat(tx.amount || '0').toLocaleString(undefined, { maximumFractionDigits: 6 })} {asset?.symbol || ''}
+                        </span>
+                        {/* Show Status under Amount on mobile instead of Fee */}
+                        <div className="mt-1 md:hidden">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-[6px] text-[10px] font-bold uppercase tracking-wider border ${getStatusBadge(tx.status)}`}>
+                            {tx.status}
                           </span>
-                          {tx.fee && tx.fee !== '0' && (
-                            <span className="text-xs text-[#888c99]">Fee: {tx.fee}</span>
-                          )}
                         </div>
-                      </td>
+                      </div>
 
-                      {/* Status */}
-                      <td className="py-4 px-6">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${getStatusBadge(
-                            tx.status
-                          )}`}
-                        >
+                      {/* Status (Hidden on Mobile, as it's shown under Amount) */}
+                      <div className="hidden md:flex w-full md:w-auto col-span-2 justify-between md:flex-col md:block mt-4 md:mt-0 pt-4 md:pt-0 border-t border-[#22252e]/50 md:border-0 items-center md:items-start">
+                        <span className="md:hidden text-[11px] text-[#888c99] block">Status</span>
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-[6px] text-xs font-bold uppercase tracking-wider border ${getStatusBadge(tx.status)}`}>
                           {tx.status}
                         </span>
-                      </td>
+                      </div>
 
-                      {/* Hash */}
-                      <td className="py-4 px-6">
-                        <span className="font-mono text-xs text-blue-400 hover:text-blue-300 max-w-[140px] truncate underline underline-offset-2">
+                      {/* Tx Hash (Hidden on Mobile) */}
+                      <div className="hidden md:flex w-1/2 md:w-auto col-span-2 flex-col items-end md:items-start md:block mt-2 md:mt-0 pt-2 md:pt-0 border-t border-[#22252e]/50 md:border-0">
+                        <span className="md:hidden text-[11px] text-[#888c99] mb-0.5 block">Tx Hash</span>
+                        <span className="font-mono text-xs text-blue-400 hover:text-blue-300 max-w-[140px] truncate underline underline-offset-2 block">
                           {tx.id}
                         </span>
-                      </td>
+                      </div>
 
-                      {/* Date */}
-                      <td className="py-4 px-6 text-right">
-                        <div className="flex flex-col items-end">
-                          <span className="text-white font-medium">
-                            {new Date(tx.created_at).toLocaleDateString(undefined, {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
-                            })}
-                          </span>
-                          <span className="text-xs text-[#888c99]">
-                            {new Date(tx.created_at).toLocaleTimeString(undefined, {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
+                      {/* Date (Hidden on Mobile) */}
+                      <div className="hidden md:flex w-full md:w-auto col-span-2 justify-between md:flex-col items-center md:items-end mt-4 md:mt-0 pt-4 md:pt-0 border-t border-[#22252e]/50 md:border-0">
+                        <span className="text-white font-medium">
+                          {new Date(tx.created_at).toLocaleDateString(undefined, {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })}
+                        </span>
+                        <span className="text-xs text-[#888c99]">
+                          {new Date(tx.created_at).toLocaleTimeString(undefined, {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                      </div>
+                    </div>
                   );
                 })}
-              </tbody>
-            </table>
+              </div>
+            </div>
           )}
         </div>
 
@@ -231,7 +221,7 @@ export default function SwapPage() {
             <button
               disabled={page === 1}
               onClick={() => setPage(page - 1)}
-              className="px-4 py-2 rounded-xl bg-[#1c1f26] text-white text-sm font-semibold hover:bg-[#22252e] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-4 py-2 rounded-[8px] bg-[#1c1f26] text-white text-sm font-semibold hover:bg-[#22252e] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Previous
             </button>
@@ -241,7 +231,7 @@ export default function SwapPage() {
             <button
               disabled={page === totalPages}
               onClick={() => setPage(page + 1)}
-              className="px-4 py-2 rounded-xl bg-[#1c1f26] text-white text-sm font-semibold hover:bg-[#22252e] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-4 py-2 rounded-[8px] bg-[#1c1f26] text-white text-sm font-semibold hover:bg-[#22252e] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Next
             </button>
