@@ -6,9 +6,11 @@ import {
   type LoginDto,
   type RegisterDto,
   type AuthResponse,
+  type RegisterResponse,
+  registerResponseSchema,
 } from './auth.schema';
 
-export type { LoginDto, RegisterDto, AuthResponse };
+export type { LoginDto, RegisterDto, AuthResponse, RegisterResponse };
 
 export const authService = {
   login: async (data: LoginDto): Promise<AuthResponse> => {
@@ -20,11 +22,15 @@ export const authService = {
     return authResponseSchema.parse(response.data);
   },
 
-  register: async (data: RegisterDto): Promise<AuthResponse> => {
+  register: async (data: RegisterDto): Promise<RegisterResponse> => {
     // Validate input before sending
     registerSchema.parse(data);
 
     const response = await apiRequest.post('/auth/register', data);
-    return authResponseSchema.parse(response.data);
+    return registerResponseSchema.parse(response.data);
+  },
+
+  verifyEmail: async (token: string): Promise<void> => {
+    await apiRequest.get(`/auth/verify-email?token=${token}`);
   },
 };

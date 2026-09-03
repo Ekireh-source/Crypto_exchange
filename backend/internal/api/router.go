@@ -141,6 +141,7 @@ func RegisterRoutes(e *echo.Echo, cfg *config.Config, pool *db.Pool, adapters ma
 	auth.POST("/login", authHandler.Login)
 	auth.POST("/refresh", authHandler.Refresh)
 	auth.POST("/logout", authHandler.Logout)
+	auth.GET("/verify-email", authHandler.VerifyEmail)
 
 	v1.GET("/ws/prices", wsHandler.ServeWS)
 
@@ -149,13 +150,14 @@ func RegisterRoutes(e *echo.Echo, cfg *config.Config, pool *db.Pool, adapters ma
 	protected.Use(middleware.RequireAuth(cfg.JWTSecret))
 
 	idempotentMW := middleware.RequireIdempotency(idempotencyRepo)
+	verifiedMW := middleware.RequireEmailVerified()
 
 	wallet := protected.Group("/wallet")
 	wallet.GET("/assets", walletHandler.GetAssets)
 	wallet.GET("/portfolio", walletHandler.GetPortfolio)
 	wallet.GET("/deposit/:assetID", walletHandler.GetDepositAddress)
-	wallet.POST("/send", walletHandler.SendCrypto, idempotentMW)
-	wallet.POST("/swap", walletHandler.HandleSwap, idempotentMW)
+	wallet.POST("/send", walletHandler.SendCrypto, verifiedMW, idempotentMW)
+	wallet.POST("/swap", walletHandler.HandleSwap, verifiedMW, idempotentMW)
 	wallet.GET("/transactions", walletHandler.GetTransactions)
 	wallet.GET("/transactions/:id", walletHandler.GetTransaction)
 	wallet.GET("/watchlist", walletHandler.GetWatchlist)
@@ -165,14 +167,14 @@ func RegisterRoutes(e *echo.Echo, cfg *config.Config, pool *db.Pool, adapters ma
 	user.GET("/profile", authHandler.GetProfile)
 
 	p2p := protected.Group("/p2p")
-	p2p.POST("/orders", p2pHandler.CreateOrder, idempotentMW)
+	p2p.POST("/orders", p2pHandler.CreateOrder, verifiedMW, idempotentMW)
 	p2p.GET("/orders", p2pHandler.ListActiveOrders)
-	p2p.POST("/orders/:id/trade", p2pHandler.CreateTrade, idempotentMW)
+	p2p.POST("/orders/:id/trade", p2pHandler.CreateTrade, verifiedMW, idempotentMW)
 	p2p.GET("/trades", p2pHandler.ListUserTrades)
 	p2p.GET("/trades/:id", p2pHandler.GetTrade)
-	p2p.POST("/trades/:id/pay", p2pHandler.MarkTradePaid, idempotentMW)
-	p2p.POST("/trades/:id/release", p2pHandler.ReleaseTrade, idempotentMW)
-	p2p.POST("/trades/:id/cancel", p2pHandler.CancelTrade, idempotentMW)
+	p2p.POST("/trades/:id/pay", p2pHandler.MarkTradePaid, verifiedMW, idempotentMW)
+	p2p.POST("/trades/:id/release", p2pHandler.ReleaseTrade, verifiedMW, idempotentMW)
+	p2p.POST("/trades/:id/cancel", p2pHandler.CancelTrade, verifiedMW, idempotentMW)
 
 	// ── Developer Portal Routes (JWT — for managing apps/keys) ────────────────
 	developer := protected.Group("/developer")

@@ -39,13 +39,13 @@ func (r *UserRepo) Create(ctx context.Context, u *models.User) error {
 // GetByEmail retrieves a user by their email address.
 func (r *UserRepo) GetByEmail(ctx context.Context, email string) (*models.User, error) {
 	query := `
-		SELECT id, email, phone, password_hash, referral_code, referred_by, kyc_status, role, created_at
+		SELECT id, email, phone, password_hash, referral_code, referred_by, kyc_status, role, created_at, is_email_verified
 		FROM users WHERE email = $1
 	`
 	u := &models.User{}
 	err := r.pool.QueryRow(ctx, query, email).Scan(
 		&u.ID, &u.Email, &u.Phone, &u.PasswordHash,
-		&u.ReferralCode, &u.ReferredBy, &u.KYCStatus, &u.Role, &u.CreatedAt,
+		&u.ReferralCode, &u.ReferredBy, &u.KYCStatus, &u.Role, &u.CreatedAt, &u.IsEmailVerified,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -59,13 +59,13 @@ func (r *UserRepo) GetByEmail(ctx context.Context, email string) (*models.User, 
 // GetByID retrieves a user by their ID.
 func (r *UserRepo) GetByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
 	query := `
-		SELECT id, email, phone, password_hash, referral_code, referred_by, kyc_status, role, created_at
+		SELECT id, email, phone, password_hash, referral_code, referred_by, kyc_status, role, created_at, is_email_verified
 		FROM users WHERE id = $1
 	`
 	u := &models.User{}
 	err := r.pool.QueryRow(ctx, query, id).Scan(
 		&u.ID, &u.Email, &u.Phone, &u.PasswordHash,
-		&u.ReferralCode, &u.ReferredBy, &u.KYCStatus, &u.Role, &u.CreatedAt,
+		&u.ReferralCode, &u.ReferredBy, &u.KYCStatus, &u.Role, &u.CreatedAt, &u.IsEmailVerified,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -79,13 +79,13 @@ func (r *UserRepo) GetByID(ctx context.Context, id uuid.UUID) (*models.User, err
 // GetByReferralCode retrieves a user by their referral code.
 func (r *UserRepo) GetByReferralCode(ctx context.Context, code string) (*models.User, error) {
 	query := `
-		SELECT id, email, phone, password_hash, referral_code, referred_by, kyc_status, role, created_at
+		SELECT id, email, phone, password_hash, referral_code, referred_by, kyc_status, role, created_at, is_email_verified
 		FROM users WHERE referral_code = $1
 	`
 	u := &models.User{}
 	err := r.pool.QueryRow(ctx, query, code).Scan(
 		&u.ID, &u.Email, &u.Phone, &u.PasswordHash,
-		&u.ReferralCode, &u.ReferredBy, &u.KYCStatus, &u.Role, &u.CreatedAt,
+		&u.ReferralCode, &u.ReferredBy, &u.KYCStatus, &u.Role, &u.CreatedAt, &u.IsEmailVerified,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -179,3 +179,47 @@ func (r *UserRepo) ListUsers(ctx context.Context) ([]*models.User, error) {
 	return users, nil
 }
 
+// MarkEmailVerified updates the user's email verification status.
+func (r *UserRepo) MarkEmailVerified(ctx context.Context, userID uuid.UUID) error {
+	query := `UPDATE users SET is_email_verified = TRUE WHERE id = $1`
+	_, err := r.pool.Exec(ctx, query, userID)
+	return err
+}
+
+// CreateEmailVerificationToken stores a new verification token for a user.
+func (r *UserRepo) CreateEmailVerificationToken(ctx context.Context, token *models.EmailVerificationToken) error {
+	query := `
+		INSERT INTO email_verification_tokens (id, user_id, token, expires_at, created_at)
+		VALUES ($1, $2, $3, $4, $5)
+	`
+	_, err := r.pool.Exec(ctx, query, token.ID, token.UserID, token.Token, token.ExpiresAt, token.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("inserting email verification token: %w", err)
+	}
+	return nil
+}
+
+// GetByVerificationToken retrieves the token record by the token string.
+func (r *UserRepo) GetByVerificationToken(ctx context.Context, token string) (*models.EmailVerificationToken, error) {
+	query := `
+		SELECT id, user_id, token, expires_at, created_at
+		FROM email_verification_tokens
+		WHERE token = $1
+	`
+	t := &models.EmailVerificationToken{}
+	err := r.pool.QueryRow(ctx, query, token).Scan(&t.ID, &t.UserID, &t.Token, &t.ExpiresAt, &t.CreatedAt)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("getting token: %w", err)
+	}
+	return t, nil
+}
+
+// DeleteVerificationToken removes a token once used or expired.
+func (r *UserRepo) DeleteVerificationToken(ctx context.Context, token string) error {
+	query := `DELETE FROM email_verification_tokens WHERE token = $1`
+	_, err := r.pool.Exec(ctx, query, token)
+	return err
+}

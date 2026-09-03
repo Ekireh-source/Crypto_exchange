@@ -100,6 +100,10 @@ func (h *WalletHandler) GetTransactions(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
+	if txs == nil {
+		txs = []models.Transaction{}
+	}
+
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"transactions": txs,
 		"total":        total,
