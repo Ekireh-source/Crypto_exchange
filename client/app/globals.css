@@ -144,3 +144,108 @@ body {
     @apply font-sans;
   }
 }
+
+.bg-grid-pattern {
+  background-size: 50px 50px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+}
+
+.neon-border {
+  box-shadow: 0 0 10px rgba(125, 211, 252, 0.5), inset 0 0 10px rgba(125, 211, 252, 0.5);
+  border-color: rgba(125, 211, 252, 0.8);
+}
+
+.neon-border-pink {
+  box-shadow: 0 0 10px rgba(244, 114, 182, 0.5), inset 0 0 10px rgba(244, 114, 182, 0.5);
+  border-color: rgba(244, 114, 182, 0.8);
+}
+
+.glow-text {
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+}
+
+.crosshairs::before,
+.crosshairs::after {
+  content: '';
+  position: absolute;
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.crosshairs::before {
+  top: 50%;
+  left: -10px;
+  right: -10px;
+  height: 1px;
+}
+
+.crosshairs::after {
+  left: 50%;
+  top: -10px;
+  bottom: -10px;
+  width: 1px;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes pulseGlowPink {
+  0%, 100% { box-shadow: 0 0 10px rgba(244, 114, 182, 0.4), inset 0 0 10px rgba(244, 114, 182, 0.4); border-color: rgba(244, 114, 182, 0.6); }
+  50% { box-shadow: 0 0 20px rgba(244, 114, 182, 0.8), inset 0 0 20px rgba(244, 114, 182, 0.8); border-color: rgba(244, 114, 182, 1); }
+}
+
+@keyframes pulseGlowBlue {
+  0%, 100% { box-shadow: 0 0 10px rgba(125, 211, 252, 0.4), inset 0 0 10px rgba(125, 211, 252, 0.4); border-color: rgba(125, 211, 252, 0.6); }
+  50% { box-shadow: 0 0 20px rgba(125, 211, 252, 0.8), inset 0 0 20px rgba(125, 211, 252, 0.8); border-color: rgba(125, 211, 252, 1); }
+}
+
+@keyframes flowRight {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes flowLeft {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes spinSlowReverse {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+.animate-pulse-pink {
+  animation: pulseGlowPink 3s ease-in-out infinite;
+}
+.animate-pulse-blue {
+  animation: pulseGlowBlue 3s ease-in-out infinite;
+}
+.animate-spin-slow {
+  animation: spinSlow 8s linear infinite;
+}
+.animate-spin-slow-reverse {
+  animation: spinSlowReverse 10s linear infinite;
+}
+.flow-line-right {
+  position: absolute;
+  top: 0; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(90deg, transparent, rgba(244,114,182,1), transparent);
+  animation: flowRight 2s linear infinite;
+}
+.flow-line-left {
+  position: absolute;
+  top: 0; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(-90deg, transparent, rgba(125,211,252,1), transparent);
+  animation: flowLeft 2s linear infinite;
+}

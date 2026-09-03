@@ -11,11 +11,11 @@ import { registerSchema, type RegisterDto } from '@/feature/auth/auth.schema';
 import AuthCard from '../_components/AuthCard';
 import Link from 'next/link';
 import { Icon } from '@iconify/react';
+import { toast } from 'sonner';
 
 export default function SignupPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const [serverError, setServerError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -28,27 +28,20 @@ export default function SignupPage() {
   });
 
   const onSubmit = async (data: RegisterDto) => {
-    setServerError('');
     try {
       const res = await authService.register(data);
-      dispatch(
-        setCredentials({
-          user: res.user,
-        })
-      );
-      router.push('/dashboard');
-    } catch (err: unknown) {
-      const message =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        'Registration failed. Please try again.';
-      setServerError(message);
+      router.push('/login');
+    } catch (err: any) {
+      const data = err.response?.data;
+      const message = data?.message || data?.error || 'Registration failed. Please try again.';
+      toast.error(message);
     }
   };
 
   const inputBase =
-    'w-full h-[52px] pl-11 pr-4 rounded-xl bg-[#14151a] border text-[#e8e8f0] text-[0.95rem] placeholder:text-[#555570] outline-none transition-all duration-200 focus:bg-[#1a1b24]';
-  const inputOk = 'border-[#2c2d3a] focus:border-[#f0c78a]';
-  const inputErr = 'border-red-500/60 focus:border-red-500';
+    'w-full h-[52px] pl-11 pr-4 rounded-md bg-[#01010d]/50 border text-slate-200 text-[0.95rem] placeholder:text-slate-500 outline-none transition-all duration-200 focus:bg-[#01010d]';
+  const inputOk = 'border-white/10 focus:border-indigo-500/50';
+  const inputErr = 'border-pink-500/60 focus:border-pink-500';
 
   return (
     <AuthCard
@@ -59,14 +52,6 @@ export default function SignupPage() {
       leftDescription="Create an account and start trading&#10;with zero hidden fees."
     >
       <form className="w-full flex flex-col gap-4 mt-2" onSubmit={handleSubmit(onSubmit)} noValidate>
-
-        {/* ── Server error banner ── */}
-        {serverError && (
-          <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
-            <Icon icon="lucide:alert-circle" className="text-lg shrink-0" />
-            {serverError}
-          </div>
-        )}
 
         {/* ── Email ── */}
         <div className="flex flex-col gap-1.5">
@@ -173,10 +158,10 @@ export default function SignupPage() {
           id="signup-submit"
           type="submit"
           disabled={isSubmitting}
-          className="w-full h-[52px] mt-2 rounded-xl bg-gradient-to-r from-[#eec18d] to-[#d6a571] text-[#14151a] text-[0.95rem] font-bold tracking-wide flex items-center justify-center gap-2 shadow-[0_4px_24px_rgba(238,193,141,0.15)] transition-all duration-200 hover:scale-[1.01] hover:shadow-[0_6px_32px_rgba(238,193,141,0.25)] active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
+          className="w-full h-[52px] mt-2 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-[0.95rem] font-medium tracking-wide flex items-center justify-center gap-2 shadow-[0_4px_24px_rgba(79,70,229,0.15)] transition-all duration-200 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {isSubmitting ? (
-            <span className="inline-block w-5 h-5 rounded-full border-[2.5px] border-[#14151a]/20 border-t-[#14151a] animate-spin" />
+            <span className="inline-block w-5 h-5 rounded-full border-[2.5px] border-white/20 border-t-white animate-spin" />
           ) : (
             <>
               Create Account

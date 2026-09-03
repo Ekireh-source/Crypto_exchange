@@ -16,6 +16,7 @@ type Config struct {
 	Port           string
 	Env            string
 	AllowedOrigins []string
+	FrontendURL    string
 
 	// Auth
 	JWTSecret         string
@@ -90,6 +91,8 @@ func Load() (*Config, error) {
 		origins = append(origins, strings.TrimSpace(o))
 	}
 	cfg.AllowedOrigins = origins
+	
+	cfg.FrontendURL = getEnvOrDefault("FRONTEND_URL", "http://localhost:3000")
 
 	// ── Auth ──────────────────────────────────────────────────────────────────
 	cfg.JWTSecret = mustGetEnv("JWT_SECRET")

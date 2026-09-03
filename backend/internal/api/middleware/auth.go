@@ -68,6 +68,12 @@ func RequireAuth(jwtSecret string) echo.MiddlewareFunc {
 			} else {
 				c.Set("userRole", "user") // default
 			}
+			
+			if emailVerified, ok := claims["email_verified"].(bool); ok {
+				c.Set("emailVerified", emailVerified)
+			} else {
+				c.Set("emailVerified", false)
+			}
 
 			return next(c)
 		}
@@ -89,6 +95,15 @@ func GetUserRole(c echo.Context) string {
 	return role
 }
 
+// IsEmailVerified extracts the verified status from the echo.Context.
+func IsEmailVerified(c echo.Context) bool {
+	verified, ok := c.Get("emailVerified").(bool)
+	if !ok {
+		return false
+	}
+	return verified
+}
+
 // RequireRole is a middleware that restricts access to users with one of the specified roles.
 // It assumes RequireAuth has already run.
 func RequireRole(roles ...string) echo.MiddlewareFunc {
@@ -101,6 +116,18 @@ func RequireRole(roles ...string) echo.MiddlewareFunc {
 				}
 			}
 			return echo.NewHTTPError(http.StatusForbidden, "Insufficient permissions")
+		}
+	}
+}
+
+// RequireEmailVerified restricts access to users who have verified their email.
+func RequireEmailVerified() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			if !IsEmailVerified(c) {
+				return echo.NewHTTPError(http.StatusForbidden, "Email verification required")
+			}
+			return next(c)
 		}
 	}
 }

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Verify Your Email</title>
+</head>
+<body style="font-family: sans-serif; background-color: #f4f4f5; padding: 20px;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 40px; border-radius: 8px;">
+        <h2 style="color: #18181b;">Verify Your Email</h2>
+        <p style="color: #52525b; font-size: 16px; line-height: 1.5;">
+            Hi {{.Email}},<br><br>
+            Thanks for registering with Busywt! Please verify your email address to unlock full access to your account.
+        </p>
+        <a href="{{.AppURL}}/verify-email?token={{.Token}}" style="display: inline-block; margin-top: 20px; padding: 12px 24px; background-color: #3b82f6; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 500;">
+            Verify Email
+        </a>
+        <p style="color: #71717a; font-size: 14px; margin-top: 40px;">
+            If you did not create an account, you can safely ignore this email.
+        </p>
+    </div>
+</body>
+</html>

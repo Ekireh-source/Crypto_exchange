@@ -116,8 +116,8 @@ func (m *Monitor) poll(ctx context.Context) error {
 	safeBlock := int64(currentBlock) - m.minConfirmations
 
 	if m.lastBlock == 0 {
-		// First poll — start from 50 blocks back to catch recent deposits.
-		m.lastBlock = safeBlock - 50
+		// Alchemy Free Tier has a 10-block range limit for eth_getLogs
+		m.lastBlock = safeBlock - 10
 	}
 
 	if m.lastBlock < 0 {

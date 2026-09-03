@@ -85,22 +85,66 @@ func (s *AuthService) Register(ctx context.Context, email, password, referralCod
 		return nil, fmt.Errorf("creating user: %w", err)
 	}
 
-	// Send welcome email asynchronously
+	// Generate Verification Token
+	tokenBytes := make([]byte, 32)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		return nil, fmt.Errorf("generating token: %w", err)
+	}
+	tokenStr := hex.EncodeToString(tokenBytes)
+	
+	emailToken := &models.EmailVerificationToken{
+		ID:        uuid.New(),
+		UserID:    user.ID,
+		Token:     tokenStr,
+		ExpiresAt: time.Now().Add(24 * time.Hour),
+		CreatedAt: time.Now(),
+	}
+	if err := s.userRepo.CreateEmailVerificationToken(ctx, emailToken); err != nil {
+		return nil, fmt.Errorf("creating verification token: %w", err)
+	}
+
+	// Send verification email asynchronously
 	if s.emailSvc != nil {
-		go func(uEmail string) {
+		go func(uEmail, vToken string) {
 			templateData := map[string]string{
 				"Email":  uEmail,
-				"AppURL": "http://localhost:3000", // In a real app, this should come from config
+				"AppURL": s.cfg.FrontendURL,
+				"Token":  vToken,
 			}
 			// Use context.Background() because the request context might be cancelled once the HTTP response is sent
-			err := s.emailSvc.SendEmail(context.Background(), uEmail, "Welcome to Crypto Exchange", "welcome.html", templateData)
+			err := s.emailSvc.SendEmail(context.Background(), uEmail, "Verify Your Email - Crypto Exchange", "verify_email.html", templateData)
 			if err != nil {
-				fmt.Printf("Failed to send welcome email to %s: %v\n", uEmail, err)
+				fmt.Printf("Failed to send verification email to %s: %v\n", uEmail, err)
 			}
-		}(user.Email)
+		}(user.Email, tokenStr)
 	}
 
 	return user, nil
+}
+
+// VerifyEmail validates the token and marks the user as verified.
+func (s *AuthService) VerifyEmail(ctx context.Context, tokenStr string) error {
+	token, err := s.userRepo.GetByVerificationToken(ctx, tokenStr)
+	if err != nil {
+		return fmt.Errorf("fetching verification token: %w", err)
+	}
+	if token == nil {
+		return ErrInvalidToken
+	}
+
+	if time.Now().After(token.ExpiresAt) {
+		_ = s.userRepo.DeleteVerificationToken(context.Background(), tokenStr)
+		return errors.New("verification token expired")
+	}
+
+	if err := s.userRepo.MarkEmailVerified(ctx, token.UserID); err != nil {
+		return fmt.Errorf("marking email verified: %w", err)
+	}
+
+	// Clean up the token
+	_ = s.userRepo.DeleteVerificationToken(context.Background(), tokenStr)
+
+	return nil
 }
 
 type TokenPair struct {
@@ -171,11 +215,12 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*T
 
 func (s *AuthService) GenerateTokenPair(user *models.User) (*TokenPair, error) {
 	accessClaims := jwt.MapClaims{
-		"sub":  user.ID.String(),
-		"role": user.Role,
-		"type": "access",
-		"exp":  time.Now().Add(s.cfg.JWTAccessExpiry).Unix(),
-		"iat":  time.Now().Unix(),
+		"sub":            user.ID.String(),
+		"role":           user.Role,
+		"email_verified": user.IsEmailVerified,
+		"type":           "access",
+		"exp":            time.Now().Add(s.cfg.JWTAccessExpiry).Unix(),
+		"iat":            time.Now().Unix(),
 	}
 	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
 	accessStr, err := accessToken.SignedString([]byte(s.cfg.JWTSecret))

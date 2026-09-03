@@ -53,5 +53,11 @@ export const authResponseSchema = z.object({
   refresh_token: z.string(),
 });
 
+export const registerResponseSchema = z.object({
+  user: authUserSchema,
+  message: z.string().optional(),
+});
+
 export type AuthUser = z.infer<typeof authUserSchema>;
 export type AuthResponse = z.infer<typeof authResponseSchema>;
+export type RegisterResponse = z.infer<typeof registerResponseSchema>;

@@ -77,23 +77,14 @@ func (h *AuthHandler) Register(c echo.Context) error {
 		return err
 	}
 
-	tokens, err := h.authSvc.GenerateTokenPair(user)
-	if err != nil {
-		return err
-	}
-
-	setTokenCookies(c, tokens)
-
-	// Omit password hash in response
 	return c.JSON(http.StatusCreated, map[string]interface{}{
+		"message": "Registration successful",
 		"user": map[string]interface{}{
 			"id":            user.ID,
 			"email":         user.Email,
 			"referral_code": user.ReferralCode,
 			"role":          user.Role,
 		},
-		"access_token":  tokens.AccessToken,
-		"refresh_token": tokens.RefreshToken,
 	})
 }
 
@@ -129,6 +120,26 @@ func (h *AuthHandler) Login(c echo.Context) error {
 		"refresh_token": tokens.RefreshToken,
 	})
 }
+
+func (h *AuthHandler) VerifyEmail(c echo.Context) error {
+	token := c.QueryParam("token")
+	if token == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "Missing token")
+	}
+
+	err := h.authSvc.VerifyEmail(c.Request().Context(), token)
+	if err != nil {
+		if errors.Is(err, services.ErrInvalidToken) || err.Error() == "verification token expired" {
+			return echo.NewHTTPError(http.StatusBadRequest, "Invalid or expired token")
+		}
+		return err
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{
+		"message": "Email successfully verified",
+	})
+}
+
 
 type RefreshRequest struct {
 	RefreshToken string `json:"refresh_token" form:"refresh_token"`
